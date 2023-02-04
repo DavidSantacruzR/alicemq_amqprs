@@ -1,8 +1,8 @@
 use amqprs::{
-    callbacks::{DefaultChannelCallback, DefaultConnectionCallback},
-    channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments},
-    connection::{Connection, OpenConnectionArguments},
-    consumer::DefaultConsumer,
+callbacks::{DefaultChannelCallback, DefaultConnectionCallback},
+channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments},
+connection::{Connection, OpenConnectionArguments},
+consumer::DefaultConsumer,
 };
 use tokio::sync::Notify;
 
