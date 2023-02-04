@@ -22,8 +22,8 @@ async fn main() {
     let connection = Connection::open(&OpenConnectionArguments::new(
         "localhost",
         5672,
-        "user",
-        "bitnami",
+        "guest",
+        "guest",
     ))
         .await
         .unwrap();
@@ -47,13 +47,13 @@ async fn main() {
         .unwrap();
 
     // bind the queue to exchange
-    let rounting_key = "amqprs.example";
+    let routing_key = "amqprs.example";
     let exchange_name = "amq.topic";
     channel
         .queue_bind(QueueBindArguments::new(
             &queue_name,
             exchange_name,
-            rounting_key,
+            routing_key,
         ))
         .await
         .unwrap();
@@ -65,7 +65,7 @@ async fn main() {
         .finish();
 
     channel
-        .basic_consume(DefaultConsumer::new(args.no_ack), args)
+        .basic_consume(DefaultConsumer::new(false), args)
         .await
         .unwrap();
 
