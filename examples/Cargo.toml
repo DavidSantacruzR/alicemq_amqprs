@@ -1,0 +1,17 @@
+[package]
+name = "examples"
+publish = false
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"]}
+amqprs = { version = "1" }
+tracing = { version = "0.1.37" }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+[[example]]
+name = "open_connection"
+path = "src/open_connection.rs"
