@@ -1,6 +1,10 @@
+use std::collections::HashMap;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use std::default::Default;
 use dotenv::dotenv;
+
+#[derive(Debug)]
+pub struct BaseCallback;
 
 #[derive(Debug)]
 pub struct ConnectionArguments {
@@ -35,7 +39,8 @@ impl Consumer {
 #[derive(Debug, Default)]
 pub struct ConsumerBuilder {
     event_queue: Option<String>,
-    connection_arguments: Option<ConnectionArguments>
+    connection_arguments: Option<ConnectionArguments>,
+    queue_manager: Option<Vec<HashMap<String, BaseCallback>>>
 }
 
 impl ConsumerBuilder {
