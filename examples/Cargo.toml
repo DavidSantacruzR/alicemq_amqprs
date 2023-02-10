@@ -15,3 +15,7 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 [[example]]
 name = "open_connection"
 path = "src/open_connection.rs"
+
+[[example]]
+name = "create_new_connection"
+path = "src/create_new_connection.rs"
