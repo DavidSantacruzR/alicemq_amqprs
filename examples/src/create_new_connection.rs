@@ -1,8 +1,12 @@
+use tokio;
 use alicemq::consumer::{Consumer};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let new_consumer = Consumer::new()
         .set_connection_arguments()?
-        .set_event_queue("test".to_string());
-    Ok(println!("{:?}", new_consumer))
+        .set_event_queue("test".to_string()).expect("damn")
+        .connect()
+        .await?;
+    Ok(())
 }
