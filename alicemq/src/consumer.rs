@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use std::default::Default;
 use std::error::Error;
+use amqprs::callbacks::DefaultConnectionCallback;
 use dotenv::dotenv;
 
 #[derive(Debug)]
@@ -73,6 +74,10 @@ impl ConsumerBuilder {
             &self.connection_arguments.as_ref().unwrap().username,
             &self.connection_arguments.as_ref().unwrap().password
         )).await.unwrap());
+        self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.")?
+            .register_callback(DefaultConnectionCallback)
+            .await
+            .unwrap();
         Ok(self)
     }
 }
