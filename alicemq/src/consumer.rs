@@ -111,6 +111,7 @@ impl ConsumerBuilder {
             new_queue_declaration,
             handler_callback?
         ); // TODO: review vec! of hashmap values.
+        //TODO: Callback handler function must be async and spawn a tokio thread.
         Ok(self)
     }
 }
