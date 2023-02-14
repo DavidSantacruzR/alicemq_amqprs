@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use std::default::Default;
 use std::error::Error;
-use amqprs::callbacks::DefaultConnectionCallback;
+use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
+use amqprs::channel::{Channel, QueueBindArguments, QueueDeclareArguments};
 use dotenv::dotenv;
 
 #[derive(Debug)]
@@ -45,7 +46,8 @@ pub struct ConsumerBuilder {
     event_queue: Option<String>,
     connection: Option<Connection>,
     connection_arguments: Option<ConnectionArguments>,
-    queue_manager: Option<Vec<HashMap<String, BaseCallback>>>
+    queue_manager: Option<HashMap<String, BaseCallback>>,
+    channel: Option<Channel>
 }
 
 impl ConsumerBuilder {
@@ -63,11 +65,11 @@ impl ConsumerBuilder {
         });
         Ok(self)
     }
-    pub fn set_event_queue(mut self, queue_reference: String) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn set_event_queue(mut self, queue_reference: String) -> Result<Self, Box<dyn Error>> {
         self.event_queue.get_or_insert(queue_reference);
         Ok(self)
     }
-    pub async fn connect(mut self) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn connect(mut self) -> Result<Self, Box<dyn Error>> {
         self.connection.get_or_insert(Connection::open( &OpenConnectionArguments::new(
             &self.connection_arguments.as_ref().unwrap().host,
             self.connection_arguments.as_ref().unwrap().port,
@@ -78,6 +80,37 @@ impl ConsumerBuilder {
             .register_callback(DefaultConnectionCallback)
             .await
             .unwrap();
+        self.channel = self.connection?.open_channel(None).await.unwrap()?
+            .register_callback(DefaultChannelCallback)
+            .await
+            .unwrap();
+        Ok(self)
+    }
+    pub fn start_queue_manager(mut self) -> Result<Self, Box<dyn error>> {
+        self.queue_manager? = HashMap::new();
+        Ok(self)
+    }
+    pub async fn event_queue(mut self, queue_name: Option<String>, handler_callback: Option<BaseCallback>
+    ) -> Result<Self, Box<dyn Error>> {
+        let (new_queue_declaration, _, _) = self.channel?
+            .queue_declare(QueueDeclareArguments::default())
+            .await
+            .unwrap()
+            .unwrap();
+        let routing_key = "amqprs.example";
+        let exchange_name = "amq.topic";
+        self.channel?
+            .queue_bind(QueueBindArguments::new(
+               &queue_name?,
+                exchange_name,
+                routing_key
+            ))
+            .await
+            .unwrap();
+        self.queue_manager?.insert(
+            new_queue_declaration,
+            handler_callback?
+        ); // TODO: review vec! of hashmap values.
         Ok(self)
     }
 }
