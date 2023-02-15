@@ -5,8 +5,10 @@ use alicemq::consumer::{Consumer};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let new_consumer = Consumer::new()
         .set_connection_arguments()?
-        .set_event_queue("test".to_string()).expect("damn")
         .connect()
+        .await?
+        .set_queue_manager()
+        .start_consumer()
         .await?;
-    Ok(())
+    Ok(println!("event manager {:?}", new_consumer.queue_manager))
 }

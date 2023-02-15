@@ -30,9 +30,8 @@ impl Default for ConnectionArguments {
 }
 
 pub struct Consumer {
-    event_queue: String,
     connection: Connection,
-    queue_manager: Vec<HashMap<String, BaseCallback>>
+    pub queue_manager: HashMap<String, BaseCallback>
 }
 
 impl Consumer {
@@ -43,11 +42,9 @@ impl Consumer {
 
 #[derive(Default)]
 pub struct ConsumerBuilder {
-    event_queue: Option<String>,
     connection: Option<Connection>,
     connection_arguments: Option<ConnectionArguments>,
     queue_manager: Option<HashMap<String, BaseCallback>>,
-    channel: Option<Channel>
 }
 
 impl ConsumerBuilder {
@@ -65,10 +62,7 @@ impl ConsumerBuilder {
         });
         Ok(self)
     }
-    pub fn set_event_queue(mut self, queue_reference: String) -> Result<Self, Box<dyn Error>> {
-        self.event_queue.get_or_insert(queue_reference);
-        Ok(self)
-    }
+
     pub async fn connect(mut self) -> Result<Self, Box<dyn Error>> {
         self.connection.get_or_insert(Connection::open( &OpenConnectionArguments::new(
             &self.connection_arguments.as_ref().unwrap().host,
@@ -80,38 +74,17 @@ impl ConsumerBuilder {
             .register_callback(DefaultConnectionCallback)
             .await
             .unwrap();
-        self.channel = self.connection?.open_channel(None).await.unwrap()?
-            .register_callback(DefaultChannelCallback)
-            .await
-            .unwrap();
         Ok(self)
     }
-    pub fn start_queue_manager(mut self) -> Result<Self, Box<dyn error>> {
-        self.queue_manager? = HashMap::new();
-        Ok(self)
+    pub fn set_queue_manager(mut self) -> Self {
+        self.queue_manager.get_or_insert(HashMap::new());
+        self
     }
-    pub async fn event_queue(mut self, queue_name: Option<String>, handler_callback: Option<BaseCallback>
-    ) -> Result<Self, Box<dyn Error>> {
-        let (new_queue_declaration, _, _) = self.channel?
-            .queue_declare(QueueDeclareArguments::default())
-            .await
-            .unwrap()
-            .unwrap();
-        let routing_key = "amqprs.example";
-        let exchange_name = "amq.topic";
-        self.channel?
-            .queue_bind(QueueBindArguments::new(
-               &queue_name?,
-                exchange_name,
-                routing_key
-            ))
-            .await
-            .unwrap();
-        self.queue_manager?.insert(
-            new_queue_declaration,
-            handler_callback?
-        ); // TODO: review vec! of hashmap values.
-        //TODO: Callback handler function must be async and spawn a tokio thread.
-        Ok(self)
+    pub async fn start_consumer(self) -> Result<Consumer, Box<dyn std::error::Error>> {
+        println!("Starting consumer with parameters {:?}", self.queue_manager.as_ref());
+        Ok(Consumer {
+            connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
+            queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
+        })
     }
 }
