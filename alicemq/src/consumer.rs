@@ -87,4 +87,7 @@ impl ConsumerBuilder {
             queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
         })
     }
+    //TODO: Add pub method to bind events, and callbacks to the event manager.
+    //TODO: Add custom error handling on consumer start.
+    //TODO: Add channel connection, and exchange binding according to AMPQ-RS API Docs.
 }
