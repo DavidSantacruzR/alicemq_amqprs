@@ -80,6 +80,13 @@ impl ConsumerBuilder {
         self.queue_manager.get_or_insert(HashMap::new());
         self
     }
+    pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
+        self.queue_manager.as_mut().unwrap().insert(
+            event_queue,
+            callback
+        );
+        self
+    }
     pub async fn start_consumer(self) -> Result<Consumer, Box<dyn std::error::Error>> {
         println!("Starting consumer with parameters {:?}", self.queue_manager.as_ref());
         Ok(Consumer {
