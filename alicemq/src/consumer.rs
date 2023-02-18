@@ -76,6 +76,14 @@ impl ConsumerBuilder {
             .unwrap();
         Ok(self)
     }
+    pub async fn create_channel(mut self) -> Result<Self, Box<dyn std::error::Error>> {
+        let channel = self.connection.as_ref().unwrap().open_channel(None).await.unwrap();
+        channel
+            .register_callback(DefaultChannelCallback)
+            .await
+            .unwrap();
+        Ok(self)
+    }
     pub fn set_queue_manager(mut self) -> Self {
         self.queue_manager.get_or_insert(HashMap::new());
         self
