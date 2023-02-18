@@ -89,6 +89,7 @@ impl ConsumerBuilder {
         self
     }
     pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
+        //TODO: Create a call to queue create here.
         self.queue_manager.as_mut().unwrap().insert(
             event_queue,
             callback
@@ -96,13 +97,16 @@ impl ConsumerBuilder {
         self
     }
     pub async fn start_consumer(self) -> Result<Consumer, Box<dyn std::error::Error>> {
-        println!("Starting consumer with parameters {:?}", self.queue_manager.as_ref());
+        //TODO: Bind here each event, callback pair.
+        for (event, callback) in self.queue_manager.as_ref()
+            .ok_or("Error binding event/callback to channel.")? {
+            println!("{:?} {:?}", event, callback)
+        }
         Ok(Consumer {
             connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
             queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
         })
     }
-    //TODO: Add pub method to bind events, and callbacks to the event manager.
     //TODO: Add custom error handling on consumer start.
     //TODO: Add channel connection, and exchange binding according to AMPQ-RS API Docs.
 }
