@@ -2,13 +2,16 @@ use std::collections::HashMap;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use std::default::Default;
 use std::error::Error;
+use callback::BaseCallback;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
-use amqprs::channel::{Channel, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use amqprs::consumer::DefaultConsumer;
 use dotenv::dotenv;
-
-#[derive(Debug)]
-pub struct BaseCallback;
-
+use crate::callback;
+use tokio::sync::Notify;
+/*
+Creating a connection to a rabbitMQ server.
+*/
 #[derive(Debug)]
 pub struct ConnectionArguments {
     host: String,
@@ -28,6 +31,10 @@ impl Default for ConnectionArguments {
 
     }
 }
+
+/*
+Default implementation of the consumer, queue manager and its respective builder.
+*/
 
 pub struct Consumer {
     connection: Connection,
@@ -76,37 +83,60 @@ impl ConsumerBuilder {
             .unwrap();
         Ok(self)
     }
-    pub async fn create_channel(mut self) -> Result<Self, Box<dyn std::error::Error>> {
-        let channel = self.connection.as_ref().unwrap().open_channel(None).await.unwrap();
-        channel
-            .register_callback(DefaultChannelCallback)
-            .await
-            .unwrap();
-        Ok(self)
-    }
     pub fn set_queue_manager(mut self) -> Self {
         self.queue_manager.get_or_insert(HashMap::new());
         self
     }
     pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
-        //TODO: Create a call to queue create here.
         self.queue_manager.as_mut().unwrap().insert(
             event_queue,
             callback
         );
         self
     }
-    pub async fn start_consumer(self) -> Result<Consumer, Box<dyn std::error::Error>> {
-        //TODO: Bind here each event, callback pair.
+    pub async fn start_consumer(self) -> Result<Consumer, Box<dyn Error>> {
+        //Traverses the hashmap, and creates a respective, queue and channel for each event.
         for (event, callback) in self.queue_manager.as_ref()
-            .ok_or("Error binding event/callback to channel.")? {
-            println!("{:?} {:?}", event, callback)
+            .ok_or("Error binding event/callback to manager.")? {
+            let channel = self.connection.as_ref().
+                expect("Unable to set channel").
+                open_channel(None).
+                await.
+                unwrap();
+            channel
+                .register_callback(DefaultChannelCallback)
+                .await
+                .unwrap();
+            let (queue_name, _, _) = channel
+                .queue_declare(QueueDeclareArguments::new(event))
+                .await
+                .unwrap()
+                .unwrap();
+            let routing_key = "amqprs.example";
+            let exchange_name = "amq.topic";
+            channel
+                .queue_bind(QueueBindArguments::new(
+                    &queue_name,
+                    exchange_name,
+                    routing_key,
+                ))
+                .await
+                .unwrap();
+            let args = BasicConsumeArguments::new(&queue_name, "basic_consumer")
+                .no_ack(true)
+                .finish();
+            channel
+                .basic_consume(DefaultConsumer::new(false), args)
+                .await
+                .unwrap();
         }
+        println!("consuming forever..., ctrl+c to exit");
+        let guard = Notify::new();
+        guard.notified().await;
         Ok(Consumer {
             connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
             queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
         })
     }
     //TODO: Add custom error handling on consumer start.
-    //TODO: Add channel connection, and exchange binding according to AMPQ-RS API Docs.
 }
