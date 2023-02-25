@@ -131,6 +131,7 @@ impl ConsumerBuilder {
                 .unwrap();
         }
         println!("consuming forever..., ctrl+c to exit");
+        //TODO: add map event to specific data handler.
         let guard = Notify::new();
         guard.notified().await;
         Ok(Consumer {
