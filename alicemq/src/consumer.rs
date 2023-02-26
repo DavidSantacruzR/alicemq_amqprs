@@ -139,5 +139,7 @@ impl ConsumerBuilder {
             queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
         })
     }
+    //TODO: Document the methods and their expected behaviour.
+    //TODO: Add handlers to manage queues in case of panic.
     //TODO: Add custom error handling on consumer start.
 }
