@@ -33,7 +33,7 @@ impl ConsumerBuilder {
             .await
             .unwrap()
         );
-        self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.")?
+        self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.".to_string())?
             .register_callback(DefaultConnectionCallback)
             .await
             .unwrap();
@@ -97,5 +97,5 @@ impl ConsumerBuilder {
     }
     //TODO: Document the methods and their expected behaviour.
     //TODO: Add handlers to manage queues in case of panic.
-    //TODO: Add custom error handling on consumer start.
+    //TODO: Add custom error handling on consumer start, on callbacks.
 }

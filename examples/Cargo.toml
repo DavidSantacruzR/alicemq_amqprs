@@ -23,5 +23,5 @@ name = "create_new_connection"
 path = "src/create_new_connection.rs"
 
 [[example]]
-name = "queue_hashmap"
-path = "src/queue_hashmap.rs"
+name = "playground"
+path = "src/playground.rs"
