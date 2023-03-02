@@ -6,35 +6,9 @@ use callback::BaseCallback;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
 use amqprs::consumer::DefaultConsumer;
-use dotenv::dotenv;
-use crate::callback;
 use tokio::sync::Notify;
-/*
-Creating a connection to a rabbitMQ server.
-*/
-#[derive(Debug)]
-pub struct ConnectionArguments {
-    host: String,
-    port: u16,
-    username: String,
-    password: String
-}
 
-impl Default for ConnectionArguments {
-    fn default() -> Self {
-        ConnectionArguments {
-            host: "localhost".to_string(),
-            port: 5672,
-            username: "guest".to_string(),
-            password: "guest".to_string(),
-        }
-
-    }
-}
-
-/*
-Default implementation of the consumer, queue manager and its respective builder.
-*/
+use crate::{callback, connection_arguments::*};
 
 pub struct Consumer {
     connection: Connection,
@@ -50,33 +24,15 @@ impl Consumer {
 #[derive(Default)]
 pub struct ConsumerBuilder {
     connection: Option<Connection>,
-    connection_arguments: Option<ConnectionArguments>,
     queue_manager: Option<HashMap<String, BaseCallback>>,
 }
 
 impl ConsumerBuilder {
-    pub fn set_connection_arguments(mut self) -> Result<Self, Box<dyn Error>> {
-        dotenv().ok();
-        let host: String = std::env::var("host").expect("No host set.");
-        let port: u16 = std::env::var("port").expect("No port set.").parse::<u16>().unwrap();
-        let username: String = std::env::var("username").expect("No user set.");
-        let password: String = std::env::var("password").expect("No pwd set.");
-        self.connection_arguments.get_or_insert(ConnectionArguments {
-            host,
-            port,
-            username,
-            password
-        });
-        Ok(self)
-    }
-
     pub async fn connect(mut self) -> Result<Self, Box<dyn Error>> {
-        self.connection.get_or_insert(Connection::open( &OpenConnectionArguments::new(
-            &self.connection_arguments.as_ref().unwrap().host,
-            self.connection_arguments.as_ref().unwrap().port,
-            &self.connection_arguments.as_ref().unwrap().username,
-            &self.connection_arguments.as_ref().unwrap().password
-        )).await.unwrap());
+        self.connection.get_or_insert(Connection::open( &ConnectionArguments::load_from_env())
+            .await
+            .unwrap()
+        );
         self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.")?
             .register_callback(DefaultConnectionCallback)
             .await

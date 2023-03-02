@@ -10,7 +10,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let another_event = "another_event".to_string();
     let another_callback = BaseCallback;
     let _ = Consumer::new()
-        .set_connection_arguments()?
         .connect()
         .await?
         .set_queue_manager()
