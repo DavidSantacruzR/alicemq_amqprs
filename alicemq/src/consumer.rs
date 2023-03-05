@@ -2,17 +2,17 @@ use std::collections::HashMap;
 use amqprs::connection::{Connection};
 use std::default::Default;
 use std::error::Error;
-use callback::BaseCallback;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::consumer::DefaultConsumer;
 use tokio::sync::Notify;
 
-use crate::{callback, connection_arguments::*};
+use crate::{connection_arguments::*};
+use crate::callback::BaseCallbackConsumer;
 
 pub struct Consumer {
     connection: Connection,
-    pub queue_manager: HashMap<String, BaseCallback>,
+    pub queue_manager: HashMap<String, BaseCallbackConsumer>,
     registered_channels: Vec<Channel>
 }
 
@@ -25,7 +25,7 @@ impl Consumer {
 #[derive(Default)]
 pub struct ConsumerBuilder {
     connection: Option<Connection>,
-    queue_manager: Option<HashMap<String, BaseCallback>>,
+    queue_manager: Option<HashMap<String, BaseCallbackConsumer>>,
 }
 
 impl ConsumerBuilder {
@@ -57,7 +57,7 @@ impl ConsumerBuilder {
 }
 
 impl Consumer {
-    pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
+    pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallbackConsumer) -> Self {
         let _ = &self.queue_manager.insert(
             event_queue,
             callback
@@ -97,7 +97,6 @@ impl Consumer {
                 .await
                 .unwrap();
             &self.registered_channels.push(channel);
-            ()
         }
         println!("consuming forever..., ctrl+c to exit");
         //TODO: add map event to specific data handler.
