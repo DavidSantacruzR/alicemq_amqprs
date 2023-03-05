@@ -51,3 +51,11 @@ Creating a smart publisher
 ```rust
 format!("Here goes code for the smart publisher.");
 ```
+
+## Running examples
+
+To run any of the examples in the folder, run the following command:
+
+```zsh
+cargo run --example my_example
+```
