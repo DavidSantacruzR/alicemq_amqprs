@@ -7,11 +7,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
+alicemq = { path = "../alicemq" }
 tokio = { version = "1", features = ["full"]}
 amqprs = { version = "1" }
 tracing = { version = "0.1.37" }
+dotenv = { version = "0.15.0" }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [[example]]
 name = "open_connection"
 path = "src/open_connection.rs"
+
+[[example]]
+name = "create_new_connection"
+path = "src/create_new_connection.rs"
+
+[[example]]
+name = "queue_hashmap"
+path = "src/queue_hashmap.rs"

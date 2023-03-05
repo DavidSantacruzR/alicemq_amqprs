@@ -32,7 +32,7 @@ async fn main() {
         .await
         .unwrap();
 
-    // open a channel on the connection
+    //open a channel on the connection
     let channel = connection.open_channel(None).await.unwrap();
     channel
         .register_callback(DefaultChannelCallback)
