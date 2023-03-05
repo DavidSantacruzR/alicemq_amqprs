@@ -13,6 +13,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect()
         .await?
         .set_queue_manager()
+        .build()
+        .unwrap()
         .set_event_callback(new_event, new_callback)
         .set_event_callback(another_event, another_callback)
         .start_consumer()

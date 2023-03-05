@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::connection::{Connection};
 use std::default::Default;
 use std::error::Error;
 use callback::BaseCallback;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
-use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::consumer::DefaultConsumer;
 use tokio::sync::Notify;
 
@@ -12,7 +12,8 @@ use crate::{callback, connection_arguments::*};
 
 pub struct Consumer {
     connection: Connection,
-    pub queue_manager: HashMap<String, BaseCallback>
+    pub queue_manager: HashMap<String, BaseCallback>,
+    registered_channels: Vec<Channel>
 }
 
 impl Consumer {
@@ -43,22 +44,32 @@ impl ConsumerBuilder {
         self.queue_manager.get_or_insert(HashMap::new());
         self
     }
+    pub fn build(self) -> Result<Consumer, Box<dyn Error>> {
+        Ok(Consumer {
+            connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
+            queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?,
+            registered_channels: vec!()
+        })
+    }
+    //TODO: Document the methods and their expected behaviour.
+    //TODO: Add handlers to manage queues in case of panic.
+    //TODO: Add custom error handling on consumer start, on callbacks.
+}
+
+impl Consumer {
     pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
-        self.queue_manager.as_mut().unwrap().insert(
+        let _ = &self.queue_manager.insert(
             event_queue,
             callback
         );
         self
     }
-    pub async fn start_consumer(self) -> Result<Consumer, Box<dyn Error>> {
-        //Traverses the hashmap, and creates a respective, queue and channel for each event.
-        for (event, callback) in self.queue_manager.as_ref()
-            .ok_or("Error binding event/callback to manager.")? {
-            let channel = self.connection.as_ref().
-                expect("Unable to set channel").
-                open_channel(None).
-                await.
-                unwrap();
+    pub async fn start_consumer(mut self) -> Result<(), Box<dyn Error>> {
+        for (event, callback) in &self.queue_manager {
+            let channel = self.connection
+                .open_channel(None)
+                .await
+                .unwrap();
             channel
                 .register_callback(DefaultChannelCallback)
                 .await
@@ -85,17 +96,13 @@ impl ConsumerBuilder {
                 .basic_consume(DefaultConsumer::new(false), args)
                 .await
                 .unwrap();
+            &self.registered_channels.push(channel);
+            ()
         }
         println!("consuming forever..., ctrl+c to exit");
         //TODO: add map event to specific data handler.
         let guard = Notify::new();
         guard.notified().await;
-        Ok(Consumer {
-            connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
-            queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
-        })
+        Ok(())
     }
-    //TODO: Document the methods and their expected behaviour.
-    //TODO: Add handlers to manage queues in case of panic.
-    //TODO: Add custom error handling on consumer start, on callbacks.
 }
