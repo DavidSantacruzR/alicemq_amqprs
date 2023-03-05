@@ -39,7 +39,7 @@ async fn main() {
         .await
         .unwrap();
 
-/*    // declare a queue
+    // declare a queue
     let (queue_name, _, _) = channel
         .queue_declare(QueueDeclareArguments::default())
         .await
@@ -67,7 +67,7 @@ async fn main() {
     channel
         .basic_consume(DefaultConsumer::new(false), args)
         .await
-        .unwrap();*/
+        .unwrap();
 
     // consume forever
     println!("consume forever..., ctrl+c to exit");
