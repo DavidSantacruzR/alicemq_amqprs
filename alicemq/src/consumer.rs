@@ -1,44 +1,19 @@
 use std::collections::HashMap;
-use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::connection::{Connection};
 use std::default::Default;
 use std::error::Error;
-use callback::BaseCallback;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
-use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::consumer::DefaultConsumer;
-use dotenv::dotenv;
-use crate::callback;
 use tokio::sync::Notify;
-/*
-Creating a connection to a rabbitMQ server.
-*/
-#[derive(Debug)]
-pub struct ConnectionArguments {
-    host: String,
-    port: u16,
-    username: String,
-    password: String
-}
 
-impl Default for ConnectionArguments {
-    fn default() -> Self {
-        ConnectionArguments {
-            host: "localhost".to_string(),
-            port: 5672,
-            username: "guest".to_string(),
-            password: "guest".to_string(),
-        }
-
-    }
-}
-
-/*
-Default implementation of the consumer, queue manager and its respective builder.
-*/
+use crate::{connection_arguments::*};
+use crate::callback::BaseCallbackConsumer;
 
 pub struct Consumer {
     connection: Connection,
-    pub queue_manager: HashMap<String, BaseCallback>
+    pub queue_manager: HashMap<String, BaseCallbackConsumer>,
+    registered_channels: Vec<Channel>
 }
 
 impl Consumer {
@@ -50,34 +25,16 @@ impl Consumer {
 #[derive(Default)]
 pub struct ConsumerBuilder {
     connection: Option<Connection>,
-    connection_arguments: Option<ConnectionArguments>,
-    queue_manager: Option<HashMap<String, BaseCallback>>,
+    queue_manager: Option<HashMap<String, BaseCallbackConsumer>>,
 }
 
 impl ConsumerBuilder {
-    pub fn set_connection_arguments(mut self) -> Result<Self, Box<dyn Error>> {
-        dotenv().ok();
-        let host: String = std::env::var("host").expect("No host set.");
-        let port: u16 = std::env::var("port").expect("No port set.").parse::<u16>().unwrap();
-        let username: String = std::env::var("username").expect("No user set.");
-        let password: String = std::env::var("password").expect("No pwd set.");
-        self.connection_arguments.get_or_insert(ConnectionArguments {
-            host,
-            port,
-            username,
-            password
-        });
-        Ok(self)
-    }
-
     pub async fn connect(mut self) -> Result<Self, Box<dyn Error>> {
-        self.connection.get_or_insert(Connection::open( &OpenConnectionArguments::new(
-            &self.connection_arguments.as_ref().unwrap().host,
-            self.connection_arguments.as_ref().unwrap().port,
-            &self.connection_arguments.as_ref().unwrap().username,
-            &self.connection_arguments.as_ref().unwrap().password
-        )).await.unwrap());
-        self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.")?
+        self.connection.get_or_insert(Connection::open( &ConnectionArguments::load_from_env())
+            .await
+            .unwrap()
+        );
+        self.connection.as_ref().ok_or("Unable to open a connection to RabbitMQ cluster.".to_string())?
             .register_callback(DefaultConnectionCallback)
             .await
             .unwrap();
@@ -87,22 +44,32 @@ impl ConsumerBuilder {
         self.queue_manager.get_or_insert(HashMap::new());
         self
     }
-    pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallback) -> Self {
-        self.queue_manager.as_mut().unwrap().insert(
+    pub fn build(self) -> Result<Consumer, Box<dyn Error>> {
+        Ok(Consumer {
+            connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
+            queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?,
+            registered_channels: vec!()
+        })
+    }
+    //TODO: Document the methods and their expected behaviour.
+    //TODO: Add handlers to manage queues in case of panic.
+    //TODO: Add custom error handling on consumer start, on callbacks.
+}
+
+impl Consumer {
+    pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallbackConsumer) -> Self {
+        let _ = &self.queue_manager.insert(
             event_queue,
             callback
         );
         self
     }
-    pub async fn start_consumer(self) -> Result<Consumer, Box<dyn Error>> {
-        //Traverses the hashmap, and creates a respective, queue and channel for each event.
-        for (event, callback) in self.queue_manager.as_ref()
-            .ok_or("Error binding event/callback to manager.")? {
-            let channel = self.connection.as_ref().
-                expect("Unable to set channel").
-                open_channel(None).
-                await.
-                unwrap();
+    pub async fn start_consumer(mut self) -> Result<(), Box<dyn Error>> {
+        for (event, callback) in &self.queue_manager {
+            let channel = self.connection
+                .open_channel(None)
+                .await
+                .unwrap();
             channel
                 .register_callback(DefaultChannelCallback)
                 .await
@@ -129,17 +96,12 @@ impl ConsumerBuilder {
                 .basic_consume(DefaultConsumer::new(false), args)
                 .await
                 .unwrap();
+            &self.registered_channels.push(channel);
         }
         println!("consuming forever..., ctrl+c to exit");
         //TODO: add map event to specific data handler.
         let guard = Notify::new();
         guard.notified().await;
-        Ok(Consumer {
-            connection: self.connection.ok_or("Unable to set a connection to rabbitMQ.")?,
-            queue_manager: self.queue_manager.ok_or("Queue manager not currently active.")?
-        })
+        Ok(())
     }
-    //TODO: Document the methods and their expected behaviour.
-    //TODO: Add handlers to manage queues in case of panic.
-    //TODO: Add custom error handling on consumer start.
 }
