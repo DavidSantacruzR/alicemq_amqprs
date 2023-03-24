@@ -19,9 +19,13 @@ name = "open_connection"
 path = "src/open_connection.rs"
 
 [[example]]
-name = "create_new_connection"
-path = "src/create_new_connection.rs"
+name = "basic_consume_publish"
+path = "src/basic_consume_publish.rs"
 
 [[example]]
 name = "playground"
 path = "src/playground.rs"
+
+[[example]]
+name = "pub_subscriber"
+path = "src/pub_subsriber.rs"
