@@ -7,6 +7,7 @@ use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueD
 use amqprs::consumer::DefaultConsumer;
 use tokio::sync::Notify;
 
+use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 use crate::{connection_arguments::*};
 use crate::callback::BaseCallbackConsumer;
 
@@ -79,8 +80,8 @@ impl Consumer {
                 .await
                 .unwrap()
                 .unwrap();
-            let routing_key = "amqprs.example";
-            let exchange_name = "amq.topic";
+            let routing_key = ROUTING_KEY;
+            let exchange_name = EXCHANGE_NAME;
             channel
                 .queue_bind(QueueBindArguments::new(
                     &queue_name,
@@ -96,7 +97,7 @@ impl Consumer {
                 .basic_consume(DefaultConsumer::new(false), args)
                 .await
                 .unwrap();
-            &self.registered_channels.push(channel);
+            let _ = &self.registered_channels.push(channel);
         }
         println!("consuming forever..., ctrl+c to exit");
         //TODO: add map event to specific data handler.
