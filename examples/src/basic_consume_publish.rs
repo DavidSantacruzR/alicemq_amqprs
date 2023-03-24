@@ -1,6 +1,7 @@
 use tokio;
 use alicemq::consumer::{Consumer};
 use alicemq::callback::{BaseCallbackConsumer};
+use alicemq::publisher::Publisher;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,5 +20,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .set_event_callback(another_event, another_callback)
         .start_consumer()
         .await?;
+
+    /*let data = "{data: value}".to_string();
+
+    let _ = Publisher::new()
+        .connect()
+        .await.unwrap()
+        .build()
+        .unwrap()
+        .send_message(data, "test_event".to_string()).await;
+    Ok(())*/
     Ok(())
 }
