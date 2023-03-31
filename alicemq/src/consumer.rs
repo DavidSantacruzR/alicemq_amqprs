@@ -5,7 +5,6 @@ use std::error::Error;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::consumer::DefaultConsumer;
-use tokio::sync::Notify;
 
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 use crate::{connection_arguments::*};
@@ -100,9 +99,7 @@ impl Consumer {
             let _ = &self.registered_channels.push(channel);
         }
         println!("consuming forever..., ctrl+c to exit");
-        //TODO: add map event to specific data handler.
-        let guard = Notify::new();
-        guard.notified().await;
+        //TODO: add map event to specific data handler, and tracing for stdout messages.
         Ok(())
     }
 }
