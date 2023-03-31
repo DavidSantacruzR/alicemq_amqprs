@@ -15,17 +15,5 @@ dotenv = { version = "0.15.0" }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [[example]]
-name = "open_connection"
-path = "src/open_connection.rs"
-
-[[example]]
 name = "basic_consume_publish"
 path = "src/basic_consume_publish.rs"
-
-[[example]]
-name = "playground"
-path = "src/playground.rs"
-
-[[example]]
-name = "pub_subscriber"
-path = "src/pub_subsriber.rs"
