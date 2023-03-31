@@ -49,7 +49,7 @@ The following code, will create the queues on a rabbitMQ node, no_ack.
 
 Creating a smart publisher
 ```rust
-format!("Here goes code for the smart publisher.");
+
 ```
 
 ## Running examples
