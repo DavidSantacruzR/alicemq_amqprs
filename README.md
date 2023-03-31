@@ -49,7 +49,17 @@ The following code, will create the queues on a rabbitMQ node, no_ack.
 
 Creating a smart publisher
 ```rust
+use alicemq::publisher::Publisher;
 
+#[tokio::main]
+async fn main() {
+    let _ = Publisher::new()
+        .connect()
+        .await.unwrap()
+        .build()
+        .unwrap()
+        .send_message("test_event".to_string(), data.to_string()).await;
+}
 ```
 
 ## Running examples
