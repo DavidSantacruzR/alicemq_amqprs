@@ -17,3 +17,7 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 [[example]]
 name = "basic_consume_publish"
 path = "src/basic_consume_publish.rs"
+
+[[example]]
+name = "custom_callback_handler"
+path = "src/custom_callback_handler.rs"
