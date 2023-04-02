@@ -4,11 +4,11 @@ use std::default::Default;
 use std::error::Error;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
-use amqprs::consumer::DefaultConsumer;
+use tracing_subscriber::FmtSubscriber;
+use tracing::{info, Level, trace};
 
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
-use crate::{connection_arguments::*};
-use crate::callback::BaseCallbackConsumer;
+use crate::{callback::*, connection_arguments::*};
 
 pub struct Consumer {
     connection: Connection,
@@ -64,8 +64,15 @@ impl Consumer {
         );
         self
     }
-    pub async fn start_consumer(mut self) -> Result<(), Box<dyn Error>> {
-        for (event, callback) in &self.queue_manager {
+    pub async fn start_consumer(mut self) -> Result<Self, Box<dyn Error>> {
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+        //had to clone the queue manager, after it's borrowed it drops all connections.
+        let queue_manager = self.queue_manager.clone();
+        for (event, callback_handler) in queue_manager {
             let channel = self.connection
                 .open_channel(None)
                 .await
@@ -75,7 +82,7 @@ impl Consumer {
                 .await
                 .unwrap();
             let (queue_name, _, _) = channel
-                .queue_declare(QueueDeclareArguments::new(event))
+                .queue_declare(QueueDeclareArguments::new(&event))
                 .await
                 .unwrap()
                 .unwrap();
@@ -89,17 +96,26 @@ impl Consumer {
                 ))
                 .await
                 .unwrap();
-            let args = BasicConsumeArguments::new(&queue_name, "basic_consumer")
-                .no_ack(true)
+            let args = BasicConsumeArguments::new(
+                &queue_name,
+                "basic_consumer"
+            )
+                .no_ack(false)
                 .finish();
-            channel
-                .basic_consume(DefaultConsumer::new(false), args)
+            let (consumer_tag, mut rx) = channel
+                .basic_consume_rx(args)
                 .await
                 .unwrap();
             let _ = &self.registered_channels.push(channel);
+            info!("Started consumer");
+            info!("Routing message to callback {:?} with consumer {}", &callback_handler, consumer_tag);
+            tokio::spawn( async move {
+                while let Some(message) = rx.recv().await {
+                    let data = std::str::from_utf8(&message.content.unwrap()).unwrap().to_string();
+                    let _ = callback_handler.handle(data);
+                };
+            });
         }
-        println!("consuming forever..., ctrl+c to exit");
-        //TODO: add map event to specific data handler, and tracing for stdout messages.
-        Ok(())
+        Ok(self)
     }
 }

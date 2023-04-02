@@ -15,7 +15,7 @@ impl Publisher {
     pub fn new() -> PublisherBuilder {
         PublisherBuilder::default()
     }
-    pub async fn send_message(mut self, queue: String, data: String) {
+    pub async fn send_message(self, queue: String, data: String) {
         let delivered_content = data.clone().into_bytes();
         let publishing_args = BasicPublishArguments::new(EXCHANGE_NAME, ROUTING_KEY);
         let channel = self.connection.open_channel(None).await.unwrap();
@@ -24,7 +24,9 @@ impl Publisher {
                 &queue,
                 EXCHANGE_NAME,
                 ROUTING_KEY
-            ));
+            ))
+            .await
+            .unwrap();
         channel
             .register_callback(DefaultChannelCallback)
             .await

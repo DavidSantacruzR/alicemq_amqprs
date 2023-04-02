@@ -9,8 +9,8 @@ use alicemq::publisher::Publisher;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //TODO: Add tracing for publishing messages instead of prints.
     let new_event = "test_event".to_string();
-    let new_callback = BaseCallbackConsumer {no_ack: false};
-    let _ = Consumer::new()
+    let new_callback = BaseCallbackConsumer {ack: false};
+    let consumer = Consumer::new()
         .connect()
         .await?
         .set_queue_manager()
@@ -23,9 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data = "{data: value}";
 
     //Giving time to bind queues to the consumer.
-    time::sleep(time::Duration::from_secs(5)).await;
+    time::sleep(time::Duration::from_secs(10)).await;
 
-    let mut publisher = Publisher::new()
+    let publisher = Publisher::new()
         .connect()
         .await.unwrap()
         .build()
