@@ -22,12 +22,15 @@ use alicemq::callback::{BaseCallback};
 ```
 
 ### Defining an event queue.
+
+The BaseCallback defines a parameter to determine if manual ack should be implemented.
+
 ```rust
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let new_event = "my_custom_event".to_string();
-    let new_callback = BaseCallback;
+    let new_callback = BaseCallbackConsumer::new(false);
     Ok(())
 }
 ```
