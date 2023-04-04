@@ -9,7 +9,7 @@ use alicemq::publisher::Publisher;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //TODO: Add tracing for publishing messages instead of prints.
     let new_event = "test_event".to_string();
-    let new_callback = BaseCallbackConsumer {ack: false};
+    let new_callback = BaseCallbackConsumer::new(false);
     let consumer = Consumer::new()
         .connect()
         .await?
