@@ -3,6 +3,7 @@ use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicPublishArguments, QueueBindArguments};
 use amqprs::connection::{Connection};
 use tokio::time;
+use tracing::info;
 use crate::connection_arguments::ConnectionArguments;
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 
@@ -36,8 +37,7 @@ impl Publisher {
             .await
             .unwrap();
         time::sleep(time::Duration::from_millis(100)).await;
-        //TODO: Add tracing to sending messages to the consumer.
-        println!("message sent with data: {:?}", data);
+        info!("message sent with data: {:?}", data);
     }
 }
 

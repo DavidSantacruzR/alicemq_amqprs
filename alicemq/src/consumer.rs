@@ -102,19 +102,12 @@ impl Consumer {
             )
                 .no_ack(false)
                 .finish();
-            let (consumer_tag, mut rx) = channel
-                .basic_consume_rx(args)
+            channel
+                .basic_consume(callback_handler, args)
                 .await
                 .unwrap();
             let _ = &self.registered_channels.push(channel);
-            info!("Started consumer");
-            info!("Routing message to callback {:?} with consumer {}", &callback_handler, consumer_tag);
-            tokio::spawn( async move {
-                while let Some(message) = rx.recv().await {
-                    let data = std::str::from_utf8(&message.content.unwrap()).unwrap().to_string();
-                    let _ = callback_handler.handle(data);
-                };
-            });
+            info!("Started consumer ...");
         }
         Ok(self)
     }
