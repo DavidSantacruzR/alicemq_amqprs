@@ -41,7 +41,11 @@ impl Publisher {
     }
 
     pub async fn close(self) {
-        self.connection.close();
+        let connection_result =  self.connection.close().await;
+        match connection_result {
+            Ok(_) => info!("Publisher connection closed."),
+            Err(_) => info!("Unexpected error closing connection")
+        };
     }
 }
 
