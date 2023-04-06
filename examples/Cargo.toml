@@ -17,3 +17,7 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 [[example]]
 name = "basic_consume_publish"
 path = "src/basic_consume_publish.rs"
+
+[[example]]
+name = "basic_consume_publish_no_ack"
+path = "src/basic_consume_publish_no_ack.rs"
