@@ -5,7 +5,7 @@ use std::error::Error;
 use amqprs::callbacks::{DefaultChannelCallback, DefaultConnectionCallback};
 use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use tracing_subscriber::FmtSubscriber;
-use tracing::{info, Level, trace};
+use tracing::{info, Level};
 
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 use crate::{callback::*, connection_arguments::*};
@@ -64,13 +64,12 @@ impl Consumer {
         );
         self
     }
-    pub async fn start_consumer(mut self) -> Result<Self, Box<dyn Error>> {
+    pub async fn start_consumer(&mut self) -> Result<(), Box<dyn Error>> {
         let subscriber = FmtSubscriber::builder()
             .with_max_level(Level::TRACE)
             .finish();
         tracing::subscriber::set_global_default(subscriber)
             .expect("setting default subscriber failed");
-        //had to clone the queue manager, after it's borrowed it drops all connections.
         let queue_manager = self.queue_manager.clone();
         for (event, callback_handler) in queue_manager {
             let channel = self.connection
@@ -109,6 +108,6 @@ impl Consumer {
             let _ = &self.registered_channels.push(channel);
             info!("Started consumer ...");
         }
-        Ok(self)
+        Ok(())
     }
 }

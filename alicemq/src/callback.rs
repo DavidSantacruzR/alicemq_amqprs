@@ -1,4 +1,3 @@
-use std::str;
 use amqprs::channel::{BasicAckArguments, Channel};
 use amqprs::consumer::AsyncConsumer;
 use amqprs::{BasicProperties, Deliver};
