@@ -49,9 +49,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .set_queue_manager()
         .build()
         .unwrap()
-        .set_event_callback(new_event, new_callback)
+        .set_event_callback(new_event, new_callback);
+    
+    //Have the consumer running and in scope, otherwise It'll drop active connections.
+    consumer
         .start_consumer()
         .await?;
+        
 }
 ````
 The following code, will create the queues on a rabbitMQ node, no_ack.

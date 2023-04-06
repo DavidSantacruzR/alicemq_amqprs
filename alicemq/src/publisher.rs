@@ -39,6 +39,10 @@ impl Publisher {
         time::sleep(time::Duration::from_millis(100)).await;
         info!("message sent with data: {:?}", data);
     }
+
+    pub async fn close(self) {
+        self.connection.close();
+    }
 }
 
 #[derive(Default)]
