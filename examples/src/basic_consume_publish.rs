@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     time::sleep(time::Duration::from_secs(5)).await;
 
-    let mut publisher = Publisher::new()
+    let publisher = Publisher::new()
         .connect()
         .await.unwrap()
         .build()
