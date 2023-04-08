@@ -4,8 +4,13 @@ use amqprs::{BasicProperties, Deliver};
 use async_trait::async_trait;
 use tracing::info;
 
+/// The `BaseCallbackConsumer` is the main type expected by the consumer,
+/// and it's where a custom message handling must be implemented.
+/// AsyncConsumer as well as BlockingConsumer traits from the amqprs library are supported.
+
 #[derive(Debug, Clone, Copy)]
 pub struct BaseCallbackConsumer {
+    /// A `True` value indicates that all message consumer acknowledgements must be implemented.
     pub no_ack: bool
 }
 
@@ -24,7 +29,6 @@ impl AsyncConsumer for BaseCallbackConsumer {
         _basic_properties: BasicProperties,
         _content: Vec<u8>,
     ) {
-        // ack explicitly if manual ack
         info!("got message {:?}", std::str::from_utf8(&_content));
         if !self.no_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
