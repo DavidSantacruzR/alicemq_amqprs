@@ -87,21 +87,19 @@ impl ConsumerBuilder {
 }
 
 impl Consumer {
+    /// set event callback push to the queue manager each event / callback pair.
+    /// Each of the callbacks should be of type of an BaseCallbackConsumer.
+    /// You can implement either an AsyncConsumer or any of the provided by the amqprs library.
     pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallbackConsumer) -> Self {
-        /// This method allows the user to insert as many event / callback pair
-        /// into the queue manager.
-        /// Each of the callbacks should be of type of an BaseCallbackConsumer.
-        /// You can implement either an AsyncConsumer or any of the provided by the amqprs library.
-
         let _ = &self.queue_manager.insert(
             event_queue,
             callback
         );
         self
     }
+    /// There is no public method for this type to stop consuming on a given time.
+    /// Therefore, the consumer must be closed to drop all connections.
     pub async fn start_consumer(&mut self) -> Result<(), Box<dyn Error>> {
-        /// This method starts the consumer, and keeps it running until the instance is dropped.
-        /// There is no public method for this type to stop consuming on a given time.
         let subscriber = FmtSubscriber::builder()
             .with_max_level(Level::TRACE)
             .finish();
