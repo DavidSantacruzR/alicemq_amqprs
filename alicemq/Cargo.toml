@@ -6,7 +6,7 @@ rust-version = "1.68.0"
 license = "MIT"
 readme = "README.md"
 description = "Wapper for the amqprs rabbitMQ library."
-keywords = ["amqp", "rabbitmq", "async", "tokio", "lock-free"]
+keywords = ["rabbitmq", "async", "tokio"]
 categories = ["network-programming", "asynchronous"]
 
 [dependencies]
