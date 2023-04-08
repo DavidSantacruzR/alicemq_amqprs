@@ -7,6 +7,28 @@ use tracing::info;
 use crate::connection_arguments::ConnectionArguments;
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 
+/// The smart publisher is a simple way to create a connection to a rabbitMQ instance, and send
+/// as many messages as required. It only supports basic publishing.
+/// # Example
+/// ```rust
+/// use alicemq::publisher::Publisher;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let publisher = Publisher::new()
+///         .connect()
+///         .await.unwrap()
+///         .build()
+///         .unwrap();
+///
+///     for _ in 1 .. 10 {
+///         publisher.clone().send_message("test_event".to_string(), data.to_string()).await;
+///     }
+///     publisher.close().await;
+///     Ok(())
+/// }
+/// ```
+
 #[derive(Clone)]
 pub struct Publisher {
     connection: Connection

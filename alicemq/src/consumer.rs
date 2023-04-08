@@ -10,7 +10,35 @@ use tracing::{info, Level};
 use crate::constants::{ROUTING_KEY, EXCHANGE_NAME};
 use crate::{callback::*, connection_arguments::*};
 
+/// The consumer allows for the creation of a smart consumer, adding as many events,
+/// and custom message handlers as necessary.
+/// # Example
+/// ```rust
+/// use alicemq::consumer::{Consumer};
+/// use alicemq::callback::{BaseCallbackConsumer};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let new_event = "test_event".to_string();
+///     let new_callback = BaseCallbackConsumer::new(false);
+///     let mut consumer = Consumer::new()
+///         .connect()
+///         .await?
+///         .set_queue_manager()
+///         .build()
+///         .unwrap()
+///         .set_event_callback(new_event, new_callback);
+///
+///     consumer
+///         .start_consumer()
+///         .await?;
+///     Ok(())
+/// }
+/// ```
+
 pub struct Consumer {
+    /// The consumer needs a vector of registered channels
+    /// to avoid dropping bindings to a specific queue.
     connection: Connection,
     pub queue_manager: HashMap<String, BaseCallbackConsumer>,
     registered_channels: Vec<Channel>
@@ -24,6 +52,8 @@ impl Consumer {
 
 #[derive(Default)]
 pub struct ConsumerBuilder {
+    /// The builder main point is hold the rabbitMQ connection,
+    /// and the queue manager to pass it to a Consumer Instance when it is created.
     connection: Option<Connection>,
     queue_manager: Option<HashMap<String, BaseCallbackConsumer>>,
 }
@@ -58,6 +88,11 @@ impl ConsumerBuilder {
 
 impl Consumer {
     pub fn set_event_callback(mut self, event_queue: String, callback: BaseCallbackConsumer) -> Self {
+        /// This method allows the user to insert as many event / callback pair
+        /// into the queue manager.
+        /// Each of the callbacks should be of type of an BaseCallbackConsumer.
+        /// You can implement either an AsyncConsumer or any of the provided by the amqprs library.
+
         let _ = &self.queue_manager.insert(
             event_queue,
             callback
@@ -65,6 +100,8 @@ impl Consumer {
         self
     }
     pub async fn start_consumer(&mut self) -> Result<(), Box<dyn Error>> {
+        /// This method starts the consumer, and keeps it running until the instance is dropped.
+        /// There is no public method for this type to stop consuming on a given time.
         let subscriber = FmtSubscriber::builder()
             .with_max_level(Level::TRACE)
             .finish();

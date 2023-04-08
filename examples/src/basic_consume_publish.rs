@@ -17,7 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap()
         .set_event_callback(new_event, new_callback);
 
-    /*Starts the consumer, and keep it running, if out scope closes active connections.*/
     consumer
         .start_consumer()
         .await?;
