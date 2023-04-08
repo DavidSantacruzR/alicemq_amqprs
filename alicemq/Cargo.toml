@@ -2,8 +2,12 @@
 name = "alicemq"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+rust-version = "1.68.0"
+license = "MIT"
+readme = "README.md"
+description = "Wapper for the amqprs rabbitMQ library."
+keywords = ["amqp", "rabbitmq", "async", "tokio", "lock-free"]
+categories = ["network-programming", "asynchronous"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"]}
