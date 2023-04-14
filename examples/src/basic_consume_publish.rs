@@ -1,14 +1,19 @@
 use tokio;
 use tokio::sync::Notify;
 use tokio::time;
+use tracing::info;
 use alicemq::consumer::{Consumer};
 use alicemq::callback::{BaseCallbackConsumer};
 use alicemq::publisher::Publisher;
 
+async fn simple_callback(message: String) {
+    info!("received a message {:?}", message)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let new_event = "test_event".to_string();
-    let new_callback = BaseCallbackConsumer::new(false);
+    let mut new_callback = BaseCallbackConsumer {no_ack: false, handler: Box::new((simple_callback))};
     let mut consumer = Consumer::new()
         .connect()
         .await?

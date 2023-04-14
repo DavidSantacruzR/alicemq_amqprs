@@ -11,12 +11,16 @@ use tracing::info;
 #[derive(Debug, Clone, Copy)]
 pub struct BaseCallbackConsumer {
     /// A `True` value indicates that all message consumer acknowledgements must be implemented.
-    pub no_ack: bool
+    pub no_ack: bool,
+    pub handler: Box<dyn FnMut()>
 }
 
 impl BaseCallbackConsumer {
-    pub fn new(no_ack: bool) -> Self {
-        Self { no_ack }
+    pub fn set_callback(&mut self, callback_handler:impl FnMut() + 'static) {
+        self.handler = callback_handler;
+    }
+    async fn handle_message(&mut self, message: String) {
+        (self.handler)(message).await;
     }
 }
 
@@ -27,9 +31,10 @@ impl AsyncConsumer for BaseCallbackConsumer {
         channel: &Channel,
         deliver: Deliver,
         _basic_properties: BasicProperties,
-        _content: Vec<u8>,
+        content: Vec<u8>,
     ) {
-        info!("got message {:?}", std::str::from_utf8(&_content));
+        let message = std::str::from_utf8(&content).unwrap();
+        self.handle_message(message.to_string());
         if !self.no_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
