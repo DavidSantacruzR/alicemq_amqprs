@@ -1,3 +1,4 @@
+use amqprs::callbacks::ConnectionCallback;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::settings::base::{Config};
 
@@ -31,5 +32,10 @@ impl ConsumerBuilder {
             .await
             .unwrap();
         self.connection = Some(connection);
+    }
+
+    async fn register_connection_callbacks<F>(&mut self, callback: F)
+        where F: ConnectionCallback + Send + 'static {
+        //code here.
     }
 }
