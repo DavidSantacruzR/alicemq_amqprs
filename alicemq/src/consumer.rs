@@ -1,41 +1,59 @@
+use std::collections::HashMap;
 use amqprs::callbacks::ConnectionCallback;
+use amqprs::channel::Channel;
 use amqprs::connection::{Connection, OpenConnectionArguments};
+use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback, CallbackRunner};
 use crate::settings::base::{Config};
 
-struct ConsumerManager;
+struct ConsumerManager {
+    connection: Connection,
+    channel: Channel,
+    callback_runner: CallbackRunner,
+}
 
-#[derive(Default)]
 struct ConsumerBuilder {
     config: Config,
-    connection: Option<Connection>,
+    connection: Option<Connection>
 }
 
 impl ConsumerManager {
     fn new() -> ConsumerBuilder {
-        ConsumerBuilder::default()
+        ConsumerBuilder {
+            config: Config::new(),
+            connection: None
+        }
     }
 }
 
 impl ConsumerBuilder {
-    fn load_settings(&mut self) -> Config {
-        Config::new()
-    }
 
-    async fn connect(&mut self) {
-        let config = self.load_settings();
+    async fn connect<F>(&mut self, callback: F) where F: ConnectionCallback + Send + 'static {
         let connection = Connection::open(&OpenConnectionArguments::new(
-            &config.host,
-            config.port,
-            &config.username,
-            &config.password
+            &self.config.host,
+            self.config.port,
+            &self.config.username,
+            &self.config.password
         ))
+            .await
+            .unwrap();
+        connection
+            .register_callback(callback)
             .await
             .unwrap();
         self.connection = Some(connection);
     }
+}
 
-    async fn register_connection_callbacks<F>(&mut self, callback: F)
-        where F: ConnectionCallback + Send + 'static {
-        //code here.
+impl ConsumerManager {
+    async fn add_channel(&mut self) {
+        let mut new_channel = self.connection
+            .open_channel(None)
+            .await
+            .unwrap();
+        new_channel
+            .register_callback(CustomChannelCallback)
+            .await
+            .unwrap();
+        self.channel = new_channel;
     }
 }

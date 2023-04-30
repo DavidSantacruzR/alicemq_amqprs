@@ -61,3 +61,9 @@ impl ChannelCallback for CustomChannelCallback {
         );
     }
 }
+
+pub struct CallbackRunner;
+
+impl CallbackRunner {
+    async fn run() {}
+}
