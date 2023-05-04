@@ -6,12 +6,10 @@ use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
 use amqprs::consumer::AsyncConsumer;
 
-type BaseCallback = Box< dyn AsyncConsumer + Send + 'static>;
-
 pub struct ConsumerManager {
     connection: Connection,
     channel: Channel,
-    callback_runner: HashMap<String, BaseCallback>
+    callback_runner: HashMap<String, Box<dyn AsyncConsumer + Send + 'static>>
 }
 
 pub struct ConsumerBuilder {
@@ -28,10 +26,11 @@ impl ConsumerManager {
             connection: None
         }
     }
-    pub fn set_event_queue(&mut self, event_name: String, callback: BaseCallback) {
+    pub fn set_event_queue<F>(&mut self, event_name: String, callback: F)
+    where F: AsyncConsumer + Send + 'static {
         self.callback_runner.insert(
             event_name,
-            callback
+            Box::new(callback)
         );
     }
     pub async fn run(&mut self, long_lived: bool) {
