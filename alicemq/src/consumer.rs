@@ -1,13 +1,15 @@
-use amqprs::channel::Channel;
+use std::collections::HashMap;
+use amqprs::{channel::Channel};
 use tokio::sync::Notify;
 use amqprs::connection::{Connection, OpenConnectionArguments};
-use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback, CallbackRunner};
+use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
+use amqprs::consumer::AsyncConsumer;
 
 pub struct ConsumerManager {
     connection: Connection,
     channel: Channel,
-    callback_runner: CallbackRunner,
+    callback_runner: HashMap<String, Box<dyn AsyncConsumer + Send + 'static>>
 }
 
 pub struct ConsumerBuilder {
@@ -22,6 +24,20 @@ impl ConsumerManager {
             config: Config::new(),
             channel: None,
             connection: None
+        }
+    }
+    pub fn set_event_queue<F>(&mut self, event_name: String, callback: F)
+    where F: AsyncConsumer + Send + 'static {
+        self.callback_runner.insert(
+            event_name,
+            Box::new(callback)
+        );
+    }
+    pub async fn run(&mut self, long_lived: bool) {
+        //Runs all task at hand calling their custom callback consumers.
+        if long_lived {
+            let guard = Notify::new();
+            guard.notified().await;
         }
     }
 }
@@ -62,15 +78,7 @@ impl ConsumerBuilder {
         ConsumerManager {
             connection: self.connection.unwrap(),
             channel: self.channel.unwrap(),
-            callback_runner: CallbackRunner{}
+            callback_runner: HashMap::new()
         }
-    }
-}
-
-impl ConsumerManager {
-    pub fn set_event_queue(&mut self) {}
-    pub async fn run(&mut self) {
-        let guard = Notify::new();
-        guard.notified().await;
     }
 }
