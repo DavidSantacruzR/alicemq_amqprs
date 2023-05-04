@@ -40,5 +40,5 @@ async fn main() {
         "test_event".to_string(),
         ConsumerCallback
     );
-    test_consumer.run().await;
+    test_consumer.run(true).await;
 }
