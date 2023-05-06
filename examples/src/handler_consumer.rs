@@ -44,5 +44,10 @@ async fn main() {
             "test_event".to_string(),
             ConsumerCallback {no_ack: false}
         ).await;
+    test_consumer
+        .set_event_queue(
+            "another_event".to_string(),
+            ConsumerCallback {no_ack: false}
+        ).await;
     test_consumer.run(true).await;
 }
