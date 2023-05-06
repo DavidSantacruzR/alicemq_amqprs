@@ -32,7 +32,7 @@ impl AsyncConsumer for ConsumerCallback {
 
 #[tokio::main]
 async fn main() {
-    let mut test_consumer = ConsumerManager::new()
+    let test_consumer = ConsumerManager::new()
         .connect()
         .await
         .add_channel()
@@ -43,11 +43,6 @@ async fn main() {
         .set_event_queue(
             "test_event".to_string(),
             ConsumerCallback {no_ack: false}
-        ).await;
-    test_consumer
-        .set_event_queue(
-            "another_event".to_string(),
-            ConsumerCallback {no_ack: false}
-        ).await;
-    test_consumer.run(true).await;
+        ).await
+        .run(true).await;
 }

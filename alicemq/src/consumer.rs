@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use amqprs::{channel::Channel};
 use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
 use tokio::sync::Notify;
@@ -10,9 +9,7 @@ use tracing::info;
 
 pub struct ConsumerManager {
     connection: Connection,
-    channel: Channel,
-    callback_runner: HashMap<String, Box<dyn AsyncConsumer + Send + 'static>>,
-    queue_bindings: Vec<Channel>
+    channel: Channel
 }
 
 pub struct ConsumerBuilder {
@@ -30,8 +27,8 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_event_queue<F>(&mut self, event_name: String, callback: F)
-    where F: AsyncConsumer + Send + 'static {
+    pub async fn set_event_queue<F>(self, event_name: String, callback: F) -> Self
+        where F: AsyncConsumer + Send + 'static {
         let (queue_name, _, _) = self.channel
             .queue_declare(QueueDeclareArguments::new(&event_name))
             .await
@@ -42,18 +39,27 @@ impl ConsumerManager {
             "amq.topic",
             "amqprs.example"
         )).await.unwrap();
-        let _ = self.callback_runner.insert(
-            event_name,
-            Box::new(callback)
-        );
+        let args = BasicConsumeArguments::new(
+            &queue_name,
+            "basic_consumer"
+        )
+            .no_ack(false)
+            .finish();
+        self.channel
+            .basic_consume(callback, args)
+            .await
+            .unwrap();
+        self
     }
 
-    pub async fn run(&mut self, long_lived: bool) {
-        //Runs all task at hand calling their custom callback consumers.
-        //Creates channels for every event, callback pair.
+    pub async fn run(self, long_lived: bool) {
         if long_lived {
+            info!("started long lived consumer");
             let guard = Notify::new();
             guard.notified().await;
+        } else {
+            self.channel.close().await.unwrap();
+            self.connection.close().await.unwrap();
         }
     }
 }
@@ -93,9 +99,7 @@ impl ConsumerBuilder {
     pub fn build(self) -> ConsumerManager {
         ConsumerManager {
             connection: self.connection.unwrap(),
-            channel: self.channel.unwrap(),
-            callback_runner: HashMap::new(),
-            queue_bindings: vec![]
+            channel: self.channel.unwrap()
         }
     }
 }
