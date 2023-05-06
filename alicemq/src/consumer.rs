@@ -32,6 +32,16 @@ impl ConsumerManager {
 
     pub async fn set_event_queue<F>(&mut self, event_name: String, callback: F)
     where F: AsyncConsumer + Send + 'static {
+        let (queue_name, _, _) = self.channel
+            .queue_declare(QueueDeclareArguments::new(&event_name))
+            .await
+            .unwrap()
+            .unwrap();
+        self.channel.queue_bind(QueueBindArguments::new(
+            &queue_name,
+            "amq.topic",
+            "amqprs.example"
+        )).await.unwrap();
         let _ = self.callback_runner.insert(
             event_name,
             Box::new(callback)
