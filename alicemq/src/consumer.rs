@@ -5,7 +5,8 @@ use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
 use amqprs::consumer::AsyncConsumer;
-use tracing::info;
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
 
 pub struct ConsumerManager {
     connection: Connection,
@@ -53,6 +54,11 @@ impl ConsumerManager {
     }
 
     pub async fn run(self, long_lived: bool) {
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
         if long_lived {
             info!("started long lived consumer");
             let guard = Notify::new();

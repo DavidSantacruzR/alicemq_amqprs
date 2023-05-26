@@ -21,10 +21,7 @@ impl AsyncConsumer for ConsumerCallback {
     ) {
         info!("test consumer delivery {} on channel {}", deliver, channel);
         info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
-        println!("This custom callback executes.");
         if !self.no_ack {
-            #[cfg(feature = "tracing")]
-            info!("ack to delivery {} on channel {}", deliver, channel);
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
         }
@@ -49,11 +46,13 @@ async fn main() {
 
     let data_to_send: String = "data: {'field': 'name'}".to_string();
     let queue: String = "test_event".to_string();
-
     let message_publisher = Publisher::default();
-    message_publisher
-        .connect()
-        .await
-        .send_message(data_to_send, queue)
-        .await
+
+    for _ in  1 .. 10 {
+        message_publisher.clone()
+            .connect()
+            .await
+            .send_message(data_to_send.clone(), queue.clone())
+            .await
+    }
 }
