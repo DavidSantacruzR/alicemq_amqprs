@@ -38,16 +38,16 @@ async fn main() {
 
     let data_to_send: String = "data: {'field': 'name'}".to_string();
     let queue: String = "test_event".to_string();
-    let message_publisher = Publisher::new();
 
-    /*test_consumer
+    test_consumer
         .set_event_queue(
             "test_event".to_string(),
             ConsumerCallback {no_ack: false}
         ).await
-        .run(true).await;*/
+        .run(true).await;
 
-    message_publisher
+    let _ = Publisher::connect()
+        .await
         .send_message(data_to_send.clone(), queue.clone())
         .await;
 }

@@ -1,17 +1,17 @@
 use amqprs::{connection::Connection, BasicProperties};
-use amqprs::channel::{BasicPublishArguments, QueueBindArguments};
+use amqprs::channel::{BasicPublishArguments, QueueBindArguments, QueueDeclareArguments};
 use amqprs::connection::OpenConnectionArguments;
 use crate::callbacks::{CustomChannelCallback, CustomConnectionCallback};
 use crate::settings::base::{Config};
 use tracing::info;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Publisher {
-    connection: Option<Connection>
+    connection: Connection
 }
 
 impl Publisher {
-    pub async fn connect(mut self) -> Self {
+    pub async fn connect() -> Publisher {
         let configuration = Config::new();
         let connection = Connection::open(&OpenConnectionArguments::new(
             &configuration.host,
@@ -25,22 +25,17 @@ impl Publisher {
             .register_callback(CustomConnectionCallback)
             .await
             .unwrap();
-        self.connection = Some(connection);
-        self
+        Publisher {
+            connection,
+        }
     }
     pub async fn send_message(self, data: String, queue: String) {
-        let new_channel = self.connection.as_ref().expect("Unable to get connection")
+        let delivered_content = data.clone().into_bytes();
+        let publishing_args = BasicPublishArguments::new("amq.topic", "amqprs.example");
+        let new_channel = self.connection
             .open_channel(None)
             .await
             .unwrap();
-        new_channel
-            .register_callback(CustomChannelCallback)
-            .await
-            .unwrap();
-
-        let delivered_content = data.clone().into_bytes();
-        let publishing_args = BasicPublishArguments::new("amq.topic", "amqprs.example");
-        let channel = self.connection.expect("No connection set to open.").open_channel(None).await.unwrap();
         new_channel
             .queue_bind(QueueBindArguments::new(
                 &queue,
@@ -49,11 +44,11 @@ impl Publisher {
             ))
             .await
             .unwrap();
-        channel
+        new_channel
             .register_callback(CustomChannelCallback)
             .await
             .unwrap();
-        channel
+        new_channel
             .basic_publish(BasicProperties::default(), delivered_content, publishing_args)
             .await
             .unwrap();
