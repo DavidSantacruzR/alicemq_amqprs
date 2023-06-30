@@ -3,7 +3,7 @@ use amqprs::consumer::AsyncConsumer;
 use amqprs::{BasicProperties, Deliver};
 use tokio;
 use tracing::info;
-use alicemq::consumer::ConsumerManager;
+use alicemq::{consumer::ConsumerManager};
 use async_trait::async_trait;
 
 struct ConsumerCallback {
@@ -19,11 +19,8 @@ impl AsyncConsumer for ConsumerCallback {
         _basic_properties: BasicProperties,
         _content: Vec<u8>,
     ) {
-        info!("test consumer delivery {} on channel {}", deliver, channel);
         info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
         if !self.no_ack {
-            #[cfg(feature = "tracing")]
-            info!("ack to delivery {} on channel {}", deliver, channel);
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
         }
@@ -32,7 +29,10 @@ impl AsyncConsumer for ConsumerCallback {
 
 #[tokio::main]
 async fn main() {
-    let mut test_consumer = ConsumerManager::new()
+
+    let queue: String = "test_event".to_string();
+
+    let test_consumer = ConsumerManager::new()
         .connect()
         .await
         .add_channel()
@@ -41,8 +41,9 @@ async fn main() {
 
     test_consumer
         .set_event_queue(
-            "test_event".to_string(),
+            queue,
             ConsumerCallback {no_ack: false}
-        ).await;
-    test_consumer.run(true).await;
+        ).await
+        .run(true).await;
+
 }

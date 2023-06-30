@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use amqprs::{channel::Channel};
 use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
 use tokio::sync::Notify;
@@ -6,13 +5,12 @@ use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
 use amqprs::consumer::AsyncConsumer;
-use tracing::info;
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
 
 pub struct ConsumerManager {
     connection: Connection,
-    channel: Channel,
-    callback_runner: HashMap<String, Box<dyn AsyncConsumer + Send + 'static>>,
-    queue_bindings: Vec<Channel>
+    channel: Channel
 }
 
 pub struct ConsumerBuilder {
@@ -30,20 +28,44 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_event_queue<F>(&mut self, event_name: String, callback: F)
-    where F: AsyncConsumer + Send + 'static {
-        let _ = self.callback_runner.insert(
-            event_name,
-            Box::new(callback)
-        );
+    pub async fn set_event_queue<F>(self, event_name: String, callback: F) -> Self
+        where F: AsyncConsumer + Send + 'static {
+        let (queue_name, _, _) = self.channel
+            .queue_declare(QueueDeclareArguments::new(&event_name))
+            .await
+            .unwrap()
+            .unwrap();
+        self.channel.queue_bind(QueueBindArguments::new(
+            &queue_name,
+            "amq.topic",
+            "amqprs.example"
+        )).await.unwrap();
+        let args = BasicConsumeArguments::new(
+            &queue_name,
+            "basic_consumer"
+        )
+            .no_ack(false)
+            .finish();
+        self.channel
+            .basic_consume(callback, args)
+            .await
+            .unwrap();
+        self
     }
 
-    pub async fn run(&mut self, long_lived: bool) {
-        //Runs all task at hand calling their custom callback consumers.
-        //Creates channels for every event, callback pair.
+    pub async fn run(self, long_lived: bool) {
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
         if long_lived {
+            info!("started long lived consumer");
             let guard = Notify::new();
             guard.notified().await;
+        } else {
+            self.channel.close().await.unwrap();
+            self.connection.close().await.unwrap();
         }
     }
 }
@@ -83,9 +105,7 @@ impl ConsumerBuilder {
     pub fn build(self) -> ConsumerManager {
         ConsumerManager {
             connection: self.connection.unwrap(),
-            channel: self.channel.unwrap(),
-            callback_runner: HashMap::new(),
-            queue_bindings: vec![]
+            channel: self.channel.unwrap()
         }
     }
 }
