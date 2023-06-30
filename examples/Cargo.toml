@@ -19,3 +19,8 @@ async-trait = "0.1"
 [[example]]
 name = "handler"
 path = "src/handler_consumer.rs"
+
+[[example]]
+name = "publish"
+path = "src/basic_publish.rs"
+

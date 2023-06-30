@@ -3,7 +3,7 @@ use amqprs::consumer::AsyncConsumer;
 use amqprs::{BasicProperties, Deliver};
 use tokio;
 use tracing::info;
-use alicemq::{consumer::ConsumerManager, publisher::Publisher};
+use alicemq::{consumer::ConsumerManager};
 use async_trait::async_trait;
 
 struct ConsumerCallback {
@@ -29,6 +29,9 @@ impl AsyncConsumer for ConsumerCallback {
 
 #[tokio::main]
 async fn main() {
+
+    let queue: String = "test_event".to_string();
+
     let test_consumer = ConsumerManager::new()
         .connect()
         .await
@@ -36,18 +39,11 @@ async fn main() {
         .await
         .build();
 
-    let data_to_send: String = "data: {'field': 'name'}".to_string();
-    let queue: String = "test_event".to_string();
-
     test_consumer
         .set_event_queue(
-            "test_event".to_string(),
+            queue,
             ConsumerCallback {no_ack: false}
         ).await
         .run(true).await;
 
-    let _ = Publisher::connect()
-        .await
-        .send_message(data_to_send.clone(), queue.clone())
-        .await;
 }

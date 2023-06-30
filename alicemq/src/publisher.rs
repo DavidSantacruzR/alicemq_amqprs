@@ -1,23 +1,28 @@
 use amqprs::{connection::Connection, BasicProperties};
-use amqprs::channel::{BasicPublishArguments, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicPublishArguments, QueueBindArguments};
 use amqprs::connection::OpenConnectionArguments;
+use tokio::time;
 use crate::callbacks::{CustomChannelCallback, CustomConnectionCallback};
 use crate::settings::base::{Config};
-use tracing::info;
+use tracing::{info};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[derive(Clone)]
-pub struct Publisher {
-    connection: Connection
-}
+pub struct Publisher;
 
 impl Publisher {
-    pub async fn connect() -> Publisher {
-        let configuration = Config::new();
+    pub async fn send_message(self, data: String, queue: String) {
+        tracing_subscriber::registry();
+
+        let message = data.into_bytes();
+        let routing_key = "amqprs.example";
+        let exchange_name = "amq.topic";
+        let connection_parameters = Config::new();
         let connection = Connection::open(&OpenConnectionArguments::new(
-            &configuration.host,
-            configuration.port,
-            &configuration.username,
-            &configuration.password
+            &connection_parameters.host,
+            connection_parameters.port,
+            &connection_parameters.username,
+            &connection_parameters.password,
         ))
             .await
             .unwrap();
@@ -25,33 +30,30 @@ impl Publisher {
             .register_callback(CustomConnectionCallback)
             .await
             .unwrap();
-        Publisher {
-            connection,
-        }
-    }
-    pub async fn send_message(self, data: String, queue: String) {
-        let delivered_content = data.clone().into_bytes();
-        let publishing_args = BasicPublishArguments::new("amq.topic", "amqprs.example");
-        let new_channel = self.connection
-            .open_channel(None)
-            .await
-            .unwrap();
-        new_channel
-            .queue_bind(QueueBindArguments::new(
-                &queue,
-                "amp.topic",
-                "amqprs.example"
-            ))
-            .await
-            .unwrap();
-        new_channel
+
+        let channel = connection.open_channel(None).await.unwrap();
+        channel
             .register_callback(CustomChannelCallback)
             .await
             .unwrap();
-        new_channel
-            .basic_publish(BasicProperties::default(), delivered_content, publishing_args)
+        channel
+            .queue_bind(QueueBindArguments::new(
+                &queue,
+                exchange_name,
+                routing_key,
+            ))
             .await
             .unwrap();
-        info!("message sent with data: {:?}", data);
+
+        let args = BasicPublishArguments::new(exchange_name, routing_key);
+        info!("Sending message with data {:?}", &message);
+        channel
+            .basic_publish(BasicProperties::default(), message, args)
+            .await
+            .unwrap();
+        time::sleep(time::Duration::from_secs(1)).await;
+        info!("message delivered successfully.");
+        channel.close().await.unwrap();
+        connection.close().await.unwrap();
     }
 }
