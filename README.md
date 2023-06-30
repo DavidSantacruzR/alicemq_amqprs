@@ -21,86 +21,24 @@ use alicemq::consumer::{Consumer};
 use alicemq::callback::{BaseCallback};
 ```
 
-### Defining an event queue.
-
-The BaseCallback defines a parameter to determine if manual ack should be implemented.
-
-```rust
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-    let new_event = "my_custom_event".to_string();
-    let new_callback = BaseCallbackConsumer::new(false);
-    Ok(())
-}
-```
-
-To set up a basic consumer, connect to a node, set the queue manager
-then add the created events, and their handlers.
-
-````rust
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //TODO: Add tracing for publishing messages instead of prints.
-    let new_event = "test_event".to_string();
-    let new_callback = BaseCallbackConsumer::new(false);
-    let consumer = Consumer::new()
-        .connect()
-        .await?
-        .set_queue_manager()
-        .build()
-        .unwrap()
-        .set_event_callback(new_event, new_callback);
-    
-    //Have the consumer running and in scope, otherwise It'll drop active connections.
-    consumer
-        .start_consumer()
-        .await?;
-        
-}
-````
-The following code, will create the queues on a rabbitMQ node, no_ack.
-
-### Creating a smart publisher
-```rust
-use alicemq::publisher::Publisher;
-
-#[tokio::main]
-async fn main() {
-    let _ = Publisher::new()
-        .connect()
-        .await.unwrap()
-        .build()
-        .unwrap()
-        .send_message("test_event".to_string(), data.to_string()).await;
-}
-```
-
 ### Implementing a custom consumer handler.
 
-To handle all the incoming messages in a specific manner, you can do an implementation 
-of the ```AsyncConsumer```, and pass it as an argument when setting an event callback.
+Currently, non-blocking async consumers, are supported. To define a new AsyncConsumer
+first implement a custom callback. indicate if it should or should not handle a custom ack.
 
 ```rust
-use std::str;
-use amqprs::channel::{BasicAckArguments, Channel};
-use amqprs::consumer::AsyncConsumer;
-use amqprs::{BasicProperties, Deliver};
+struct ConsumerCallback {
+    no_ack: bool
+}
+````
+
+Defining the AsyncConsumer from the AMPQRS library
+
+```rust
 use async_trait::async_trait;
-use tracing::info;
-
-#[derive(Debug, Clone, Copy)]
-pub struct BaseCallbackConsumer {
-    pub no_ack: bool
-}
-
-impl BaseCallbackConsumer {
-    pub fn new(no_ack: bool) -> Self {
-        Self { no_ack }
-    }
-}
 
 #[async_trait]
-impl AsyncConsumer for BaseCallbackConsumer {
+impl AsyncConsumer for ConsumerCallback {
     async fn consume(
         &mut self,
         channel: &Channel,
@@ -108,16 +46,55 @@ impl AsyncConsumer for BaseCallbackConsumer {
         _basic_properties: BasicProperties,
         _content: Vec<u8>,
     ) {
-        //You can define here your desired behaviour.
-        
-        info!("got message {:?}", std::str::from_utf8(&_content));
+        info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
         if !self.no_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
         }
     }
 }
+````
 
+To create a consumer, use the consumer manager, and define if it's long-lived.
+Define a queue and its respective callback handler.
+
+```rust
+#[tokio::main]
+async fn main() {
+
+    let queue: String = "test_event".to_string();
+
+    let test_consumer = ConsumerManager::new()
+        .connect()
+        .await
+        .add_channel()
+        .await
+        .build();
+
+    test_consumer
+        .set_event_queue(
+            queue,
+            ConsumerCallback {no_ack: false}
+        ).await
+        .run(true).await;
+}
+```
+
+To create a smart publisher simply create an instance of a smart publisher. 
+Supported data to deliver, strings only.
+
+### Creating a smart publisher
+```rust
+use alicemq::{publisher::Publisher};
+use tokio;
+
+#[tokio::main]
+async fn main() {
+
+    let publisher = Publisher {};
+    let message = String::from("data: {field_1: some data}");
+    publisher.send_message(message, "test_event".to_string()).await;
+}
 ```
 
 ## Running examples
