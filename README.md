@@ -55,6 +55,8 @@ impl AsyncConsumer for ConsumerCallback {
 }
 ````
 
+### Creating a smart long-lived consumer
+
 To create a consumer, use the consumer manager, and define if it's long-lived.
 Define a queue and its respective callback handler.
 
