@@ -2,9 +2,10 @@ use amqprs::channel::{BasicAckArguments, Channel};
 use amqprs::consumer::AsyncConsumer;
 use amqprs::{BasicProperties, Deliver};
 use tokio;
-use tracing::info;
+use tracing::{info, Level};
 use alicemq::{consumer::ConsumerManager};
 use async_trait::async_trait;
+use tracing_subscriber::FmtSubscriber;
 
 struct ConsumerCallback {
     no_ack: bool
@@ -29,7 +30,11 @@ impl AsyncConsumer for ConsumerCallback {
 
 #[tokio::main]
 async fn main() {
-
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
     let queue: String = "test_event".to_string();
 
     let test_consumer = ConsumerManager::new()
