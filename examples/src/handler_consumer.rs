@@ -20,6 +20,7 @@ impl AsyncConsumer for ConsumerCallback {
         _basic_properties: BasicProperties,
         _content: Vec<u8>,
     ) {
+
         info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
         if !self.no_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);

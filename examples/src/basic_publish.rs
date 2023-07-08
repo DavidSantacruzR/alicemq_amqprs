@@ -12,5 +12,7 @@ async fn main() {
         .expect("setting default subscriber failed");
     let publisher = Publisher {};
     let message = String::from("data: {field_1: some data}");
-    publisher.send_message(message, "test_event".to_string()).await;
+    loop {
+        publisher.clone().send_message(message.clone(), "test_event".to_string()).await;
+    }
 }

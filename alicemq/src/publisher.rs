@@ -46,7 +46,7 @@ impl Publisher {
             .unwrap();
 
         let args = BasicPublishArguments::new(exchange_name, routing_key);
-        info!("Sending message with data {:?}", &message);
+        info!("Sending message with data {:?}", String::from_utf8(message.clone()));
         channel
             .basic_publish(BasicProperties::default(), message, args)
             .await
