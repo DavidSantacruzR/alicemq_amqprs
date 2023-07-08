@@ -1,10 +1,10 @@
 use amqprs::{channel::Channel};
-use amqprs::channel::{BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, QueueBindArguments, QueueDeclareArguments};
 use tokio::sync::Notify;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
-use amqprs::consumer::AsyncConsumer;
+use amqprs::consumer::{AsyncConsumer, BlockingConsumer};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -46,6 +46,11 @@ impl ConsumerManager {
         )
             .no_ack(false)
             .finish();
+        self.channel.basic_qos(
+            BasicQosArguments::new(
+                0,0,false
+            )
+        );
         self.channel
             .basic_consume(callback, args)
             .await
