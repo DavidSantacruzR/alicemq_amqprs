@@ -1,10 +1,5 @@
 use amqprs::{channel::Channel};
-use amqprs::channel::{
-    BasicConsumeArguments, 
-    BasicQosArguments, 
-    QueueBindArguments, 
-    QueueDeclareArguments
-};
+use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, QueueBindArguments, QueueDeclareArguments};
 use tokio::sync::Notify;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
@@ -56,17 +51,13 @@ impl ConsumerManager {
         )
             .no_ack(false)
             .finish();
-        new_channel.basic_qos(
-            BasicQosArguments::new(
-                0,0,false
-            )
-        )
-            .await
-            .unwrap();
         new_channel
             .basic_consume(callback, args)
             .await
             .unwrap();
+        new_channel.basic_qos(BasicQosArguments::new(
+            0, 1, false
+        )).await.unwrap();
         self.channels.push(new_channel);
         self
     }

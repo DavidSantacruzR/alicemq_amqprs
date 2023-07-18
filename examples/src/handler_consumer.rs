@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use tracing_subscriber::FmtSubscriber;
 
 struct ConsumerCallback {
-    no_ack: bool
+    auto_ack: bool
 }
 
 #[async_trait]
@@ -22,7 +22,7 @@ impl AsyncConsumer for ConsumerCallback {
     ) {
 
         info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
-        if !self.no_ack {
+        if !self.auto_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
         }
@@ -46,7 +46,7 @@ async fn main() {
     test_consumer
         .set_event_queue(
             queue,
-            ConsumerCallback {no_ack: false}
+            ConsumerCallback {auto_ack: true}
         ).await
         .run(true).await;
 
