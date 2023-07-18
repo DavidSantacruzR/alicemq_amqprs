@@ -4,18 +4,16 @@ use tokio::sync::Notify;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
-use amqprs::consumer::{AsyncConsumer, BlockingConsumer};
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use amqprs::consumer::{AsyncConsumer};
+use tracing::{info};
 
 pub struct ConsumerManager {
     connection: Connection,
-    channel: Channel
+    channels: Vec<Channel>
 }
 
 pub struct ConsumerBuilder {
     config: Config,
-    channel: Option<Channel>,
     connection: Option<Connection>
 }
 
@@ -23,38 +21,44 @@ impl ConsumerManager {
     pub fn new() -> ConsumerBuilder {
         ConsumerBuilder {
             config: Config::new(),
-            channel: None,
             connection: None
         }
     }
 
-    pub async fn set_event_queue<F>(self, event_name: String, callback: F) -> Self
+    pub async fn set_event_queue<F>(mut self, event_name: String, callback: F) -> Self
         where F: AsyncConsumer + Send + 'static {
-        let (queue_name, _, _) = self.channel
+        let new_channel = self.connection
+            .open_channel(None)
+            .await
+            .unwrap();
+        new_channel
+            .register_callback(CustomChannelCallback)
+            .await
+            .unwrap();
+        let (queue_name, _, _) = new_channel
             .queue_declare(QueueDeclareArguments::new(&event_name))
             .await
             .unwrap()
             .unwrap();
-        self.channel.queue_bind(QueueBindArguments::new(
+        new_channel.queue_bind(QueueBindArguments::new(
             &queue_name,
             "amq.topic",
             "amqprs.example"
         )).await.unwrap();
         let args = BasicConsumeArguments::new(
             &queue_name,
-            "basic_consumer"
+            &event_name
         )
             .no_ack(false)
             .finish();
-        self.channel.basic_qos(
-            BasicQosArguments::new(
-                0,0,false
-            )
-        );
-        self.channel
+        new_channel
             .basic_consume(callback, args)
             .await
             .unwrap();
+        new_channel.basic_qos(BasicQosArguments::new(
+            0, 1, false
+        )).await.unwrap();
+        self.channels.push(new_channel);
         self
     }
 
@@ -64,7 +68,6 @@ impl ConsumerManager {
             let guard = Notify::new();
             guard.notified().await;
         } else {
-            self.channel.close().await.unwrap();
             self.connection.close().await.unwrap();
         }
     }
@@ -89,23 +92,10 @@ impl ConsumerBuilder {
         self
     }
 
-    pub async fn add_channel(mut self) -> Self {
-        let new_channel = self.connection.as_ref().expect("Unable to get connection")
-            .open_channel(None)
-            .await
-            .unwrap();
-        new_channel
-            .register_callback(CustomChannelCallback)
-            .await
-            .unwrap();
-        self.channel = Some(new_channel);
-        self
-    }
-
     pub fn build(self) -> ConsumerManager {
         ConsumerManager {
             connection: self.connection.unwrap(),
-            channel: self.channel.unwrap()
+            channels: vec!()
         }
     }
 }

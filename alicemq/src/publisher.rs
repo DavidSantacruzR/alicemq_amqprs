@@ -5,7 +5,6 @@ use tokio::time;
 use crate::callbacks::{CustomChannelCallback, CustomConnectionCallback};
 use crate::settings::base::{Config};
 use tracing::{info};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[derive(Clone)]
 pub struct Publisher;

@@ -7,12 +7,16 @@ use alicemq::{consumer::ConsumerManager};
 use async_trait::async_trait;
 use tracing_subscriber::FmtSubscriber;
 
-struct ConsumerCallback {
-    auto_ack: bool
+struct Consumer1 {
+    no_ack: bool
+}
+
+struct Consumer2 {
+    no_ack: bool
 }
 
 #[async_trait]
-impl AsyncConsumer for ConsumerCallback {
+impl AsyncConsumer for Consumer1 {
     async fn consume(
         &mut self,
         channel: &Channel,
@@ -21,8 +25,26 @@ impl AsyncConsumer for ConsumerCallback {
         _content: Vec<u8>,
     ) {
 
-        info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
-        if !self.auto_ack {
+        info!("consumer_1 {}", std::str::from_utf8(&_content).unwrap());
+        if !self.no_ack {
+            let args = BasicAckArguments::new(deliver.delivery_tag(), false);
+            channel.basic_ack(args).await.unwrap();
+        }
+    }
+}
+
+#[async_trait]
+impl AsyncConsumer for Consumer2 {
+    async fn consume(
+        &mut self,
+        channel: &Channel,
+        deliver: Deliver,
+        _basic_properties: BasicProperties,
+        _content: Vec<u8>,
+    ) {
+
+        info!("consumer_2 {}", std::str::from_utf8(&_content).unwrap());
+        if !self.no_ack {
             let args = BasicAckArguments::new(deliver.delivery_tag(), false);
             channel.basic_ack(args).await.unwrap();
         }
@@ -36,7 +58,6 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting default subscriber failed");
-    let queue: String = "test_event".to_string();
 
     let test_consumer = ConsumerManager::new()
         .connect()
@@ -45,9 +66,12 @@ async fn main() {
 
     test_consumer
         .set_event_queue(
-            queue,
-            ConsumerCallback {auto_ack: true}
+            String::from("queue_1"),
+            Consumer1 {no_ack: false}
+        ).await
+        .set_event_queue(
+            String::from("queue_2"),
+            Consumer2 {no_ack: false}
         ).await
         .run(true).await;
-
 }

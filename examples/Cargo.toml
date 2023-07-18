@@ -24,3 +24,10 @@ path = "src/handler_consumer.rs"
 name = "publish"
 path = "src/basic_publish.rs"
 
+[[example]]
+name = "handler_many"
+path = "src/handler_multiple_queues.rs"
+
+[[example]]
+name = "publisher_many"
+path = "src/publisher_multiple_queues.rs"
