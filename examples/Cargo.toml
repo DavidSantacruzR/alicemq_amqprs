@@ -31,3 +31,7 @@ path = "src/handler_multiple_queues.rs"
 [[example]]
 name = "publisher_many"
 path = "src/publisher_multiple_queues.rs"
+
+[[example]]
+name = "callback_pattern"
+path = "src/callback_pattern.rs"
