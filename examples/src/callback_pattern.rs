@@ -6,6 +6,16 @@ enum Runtimes {
     SYNCHRONOUS
 }
 
+struct SomeCustomStruct {
+    message: String
+}
+
+impl SomeCustomStruct {
+    pub fn handle(&self) {
+        println!("The message is being handled, and passed down to the custom struct {}", self.message);
+    }
+}
+
 // Trait that is in charge of executing the desired code handler.
 pub trait Runner {
     fn run(&self, message: String) {
@@ -19,11 +29,17 @@ pub struct BaseCallback {
     runtime: Runtimes
 }
 
+//Callback runner must be implemented inside the channel and implement either an async or
+// a blocking consumer with it's respective callback handler.
 pub struct CallbackRunner;
 
+// In the implementation we can use as many functions as we need, same with structs.
 impl Runner for BaseCallback {
     fn run(&self, message: String) {
         println!("Got a message, and I'm handling it ... {}", message);
+        println!("creating a custom struct");
+        let handler = SomeCustomStruct { message };
+        handler.handle();
     }
 }
 
