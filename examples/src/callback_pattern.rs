@@ -45,13 +45,16 @@ impl Runner for BaseCallback {
 
 impl CallbackRunner {
     pub fn run_callbacks(&self, data: String, callback: BaseCallback) {
-        if callback.runtime == Runtimes::ASYNCHRONOUS {
-            println!("Running in an async context.");
-            callback.run(data);
-    } else {
-            println!("Running in a blocking context.");
-            callback.run(data);
-        }
+        match callback.runtime {
+            Runtimes::ASYNCHRONOUS => {
+                println!("Running in an async context.");
+                callback.run(data);
+            },
+            Runtimes::SYNCHRONOUS => {
+                println!("Running in a blocking context.");
+                callback.run(data);
+            },
+        };
     }
 }
 
