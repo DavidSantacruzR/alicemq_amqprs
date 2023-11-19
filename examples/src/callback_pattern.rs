@@ -18,9 +18,7 @@ impl SomeCustomStruct {
 
 // Trait that is in charge of executing the desired code handler.
 pub trait Runner {
-    fn run(&self, message: String) {
-        println!("{}", message);
-    }
+    fn run(&self, _message: String) {}
 }
 
 // Base callback for which any executor must run inside the run method, this must be strictly
