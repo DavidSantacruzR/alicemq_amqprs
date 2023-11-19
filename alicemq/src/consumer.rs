@@ -1,17 +1,13 @@
-use amqprs::{channel::Channel};
-use amqprs::channel::{BasicAckArguments, BasicConsumeArguments, BasicQosArguments, ConsumerMessage, QueueBindArguments, QueueDeclareArguments};
-use tokio::sync::{mpsc, Notify};
+use amqprs::channel::{BasicAckArguments, BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use tokio::sync::{Notify};
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
-use amqprs::consumer::{AsyncConsumer};
 use tracing::{info};
-use crate::base::BaseCallback;
-use crate::traits::Runner;
+use crate::base::{CallbackRunner};
 
 pub struct ConsumerManager {
-    connection: Connection,
-    channels: Vec<Channel>
+    connection: Connection
 }
 
 pub struct ConsumerBuilder {
@@ -27,7 +23,7 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_event_queue(mut self, event_name: String, callback: BaseCallback) -> Self {
+    pub async fn set_event_queue<F>(self, event_name: String, callback: F) -> Self where F: Fn(String) + Send + Copy +'static {
         let new_channel = self.connection
             .open_channel(None)
             .await
@@ -47,27 +43,6 @@ impl ConsumerManager {
             "amqprs.example"
         )).await.unwrap();
 
-
-        let another_channel = self.connection
-            .open_channel(None)
-            .await
-            .unwrap();
-        new_channel
-            .register_callback(CustomChannelCallback)
-            .await
-            .unwrap();
-        let (queue_name, _, _) = new_channel
-            .queue_declare(QueueDeclareArguments::new(&event_name))
-            .await
-            .unwrap()
-            .unwrap();
-        new_channel.queue_bind(QueueBindArguments::new(
-            &queue_name,
-            "amq.topic",
-            "amqprs.example"
-        )).await.unwrap();
-
-
         let args = BasicConsumeArguments::new(
             &queue_name,
             &event_name
@@ -82,14 +57,13 @@ impl ConsumerManager {
             while let Some(message) = messages_rx.recv().await {
                 let data = message.content.unwrap();
                 info!("received message: {:?}", String::from_utf8(data.clone()));
-                let _ = callback.run(String::from_utf8(data).unwrap());
+                let _ = CallbackRunner.run_callbacks(String::from_utf8(data).unwrap(), callback).await;
                 let ack_args = BasicAckArguments::new(
                     message.deliver.unwrap().delivery_tag(), false);
-                another_channel.basic_ack(ack_args).await.unwrap();
+                new_channel.basic_ack(ack_args).await.unwrap();
             }
             return 0;
         }).await.unwrap();
-        self.channels.push(new_channel);
         self
     }
 
@@ -125,8 +99,7 @@ impl ConsumerBuilder {
 
     pub fn build(self) -> ConsumerManager {
         ConsumerManager {
-            connection: self.connection.unwrap(),
-            channels: vec!()
+            connection: self.connection.unwrap()
         }
     }
 }

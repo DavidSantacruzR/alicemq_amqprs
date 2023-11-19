@@ -1,25 +1,13 @@
-use async_trait::async_trait;
 use tokio;
-use tracing::Level;
+use tracing::{Level};
 use tracing_subscriber::FmtSubscriber;
-use alicemq::base::BaseCallback;
+use uuid::Uuid;
 use alicemq::consumer::ConsumerManager;
-use alicemq::enums::Runtime;
 
-#[async_trait]
-pub trait Runner {
-    async fn run(&self, _message: String) {}
+fn print_some_stuff(message: String) {
+    let id = Uuid::new_v4();
+    println!("Got message: {}, stored with uuid: {}", message, id);
 }
-
-
-#[async_trait]
-impl Runner for BaseCallback {
-    async fn run(&self, _message: String) {
-        println!("handling message");
-        println!("{}", _message);
-    }
-}
-
 
 #[tokio::main]
 async fn main() {
@@ -29,17 +17,14 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting default subscriber failed");
     let queue: String = "test_event".to_string();
-    let callback = BaseCallback { runtime: Runtime::ASYNCHRONOUS};
     let test_consumer = ConsumerManager::new()
         .connect()
         .await
         .build();
-
     test_consumer
         .set_event_queue(
             queue,
-            callback
+            print_some_stuff
         ).await
         .run(true).await;
-
 }
