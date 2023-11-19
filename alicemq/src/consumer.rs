@@ -1,11 +1,13 @@
 use amqprs::{channel::Channel};
-use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, QueueBindArguments, QueueDeclareArguments};
-use tokio::sync::Notify;
+use amqprs::channel::{BasicAckArguments, BasicConsumeArguments, BasicQosArguments, ConsumerMessage, QueueBindArguments, QueueDeclareArguments};
+use tokio::sync::{mpsc, Notify};
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
 use amqprs::consumer::{AsyncConsumer};
 use tracing::{info};
+use crate::base::BaseCallback;
+use crate::traits::Runner;
 
 pub struct ConsumerManager {
     connection: Connection,
@@ -25,8 +27,7 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_event_queue<F>(mut self, event_name: String, callback: F) -> Self
-        where F: AsyncConsumer + Send + 'static {
+    pub async fn set_event_queue(mut self, event_name: String, callback: BaseCallback) -> Self {
         let new_channel = self.connection
             .open_channel(None)
             .await
@@ -45,19 +46,49 @@ impl ConsumerManager {
             "amq.topic",
             "amqprs.example"
         )).await.unwrap();
+
+
+        let another_channel = self.connection
+            .open_channel(None)
+            .await
+            .unwrap();
+        new_channel
+            .register_callback(CustomChannelCallback)
+            .await
+            .unwrap();
+        let (queue_name, _, _) = new_channel
+            .queue_declare(QueueDeclareArguments::new(&event_name))
+            .await
+            .unwrap()
+            .unwrap();
+        new_channel.queue_bind(QueueBindArguments::new(
+            &queue_name,
+            "amq.topic",
+            "amqprs.example"
+        )).await.unwrap();
+
+
         let args = BasicConsumeArguments::new(
             &queue_name,
             &event_name
         )
             .no_ack(false)
             .finish();
-        new_channel
-            .basic_consume(callback, args)
-            .await
-            .unwrap();
-        new_channel.basic_qos(BasicQosArguments::new(
-            0, 1, false
-        )).await.unwrap();
+
+        let (_ctag, mut messages_rx) =
+            new_channel.basic_consume_rx(args).await.unwrap();
+
+        tokio::spawn(async move {
+            while let Some(message) = messages_rx.recv().await {
+                let data = message.content.unwrap();
+                info!("received message: {:?}", String::from_utf8(data.clone()));
+                let _ = callback.run(String::from_utf8(data).unwrap());
+                let ack_args = BasicAckArguments::new(
+                    message.deliver.unwrap().delivery_tag(), false);
+                another_channel.basic_ack(ack_args).await.unwrap();
+            }
+            return 0;
+        }).await.unwrap();
         self.channels.push(new_channel);
         self
     }

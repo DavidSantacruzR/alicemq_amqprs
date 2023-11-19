@@ -1,33 +1,25 @@
-use amqprs::channel::{BasicAckArguments, Channel};
-use amqprs::consumer::AsyncConsumer;
-use amqprs::{BasicProperties, Deliver};
-use tokio;
-use tracing::{info, Level};
-use alicemq::{consumer::ConsumerManager};
 use async_trait::async_trait;
+use tokio;
+use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-
-struct ConsumerCallback {
-    auto_ack: bool
-}
+use alicemq::base::BaseCallback;
+use alicemq::consumer::ConsumerManager;
+use alicemq::enums::Runtime;
 
 #[async_trait]
-impl AsyncConsumer for ConsumerCallback {
-    async fn consume(
-        &mut self,
-        channel: &Channel,
-        deliver: Deliver,
-        _basic_properties: BasicProperties,
-        _content: Vec<u8>,
-    ) {
+pub trait Runner {
+    async fn run(&self, _message: String) {}
+}
 
-        info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
-        if !self.auto_ack {
-            let args = BasicAckArguments::new(deliver.delivery_tag(), false);
-            channel.basic_ack(args).await.unwrap();
-        }
+
+#[async_trait]
+impl Runner for BaseCallback {
+    async fn run(&self, _message: String) {
+        println!("handling message");
+        println!("{}", _message);
     }
 }
+
 
 #[tokio::main]
 async fn main() {
@@ -37,7 +29,7 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting default subscriber failed");
     let queue: String = "test_event".to_string();
-
+    let callback = BaseCallback { runtime: Runtime::ASYNCHRONOUS};
     let test_consumer = ConsumerManager::new()
         .connect()
         .await
@@ -46,7 +38,7 @@ async fn main() {
     test_consumer
         .set_event_queue(
             queue,
-            ConsumerCallback {auto_ack: true}
+            callback
         ).await
         .run(true).await;
 
