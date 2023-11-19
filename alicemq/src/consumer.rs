@@ -1,15 +1,13 @@
-use amqprs::{channel::Channel};
-use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, QueueBindArguments, QueueDeclareArguments};
-use tokio::sync::Notify;
+use amqprs::channel::{BasicAckArguments, BasicConsumeArguments, QueueBindArguments, QueueDeclareArguments};
+use tokio::sync::{Notify};
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use crate::callbacks::{CustomConnectionCallback, CustomChannelCallback};
 use crate::settings::base::{Config};
-use amqprs::consumer::{AsyncConsumer};
 use tracing::{info};
+use crate::base::{CallbackRunner};
 
 pub struct ConsumerManager {
-    connection: Connection,
-    channels: Vec<Channel>
+    connection: Connection
 }
 
 pub struct ConsumerBuilder {
@@ -25,8 +23,7 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_event_queue<F>(mut self, event_name: String, callback: F) -> Self
-        where F: AsyncConsumer + Send + 'static {
+    pub async fn set_event_queue<F>(self, event_name: String, callback: F) -> Self where F: Fn(String) + Send + Copy +'static {
         let new_channel = self.connection
             .open_channel(None)
             .await
@@ -45,20 +42,28 @@ impl ConsumerManager {
             "amq.topic",
             "amqprs.example"
         )).await.unwrap();
+
         let args = BasicConsumeArguments::new(
             &queue_name,
             &event_name
         )
             .no_ack(false)
             .finish();
-        new_channel
-            .basic_consume(callback, args)
-            .await
-            .unwrap();
-        new_channel.basic_qos(BasicQosArguments::new(
-            0, 1, false
-        )).await.unwrap();
-        self.channels.push(new_channel);
+
+        let (_ctag, mut messages_rx) =
+            new_channel.basic_consume_rx(args).await.unwrap();
+
+        tokio::spawn(async move {
+            while let Some(message) = messages_rx.recv().await {
+                let data = message.content.unwrap();
+                info!("received message: {:?}", String::from_utf8(data.clone()));
+                let _ = CallbackRunner.run_callbacks(String::from_utf8(data).unwrap(), callback).await;
+                let ack_args = BasicAckArguments::new(
+                    message.deliver.unwrap().delivery_tag(), false);
+                new_channel.basic_ack(ack_args).await.unwrap();
+            }
+            return 0;
+        }).await.unwrap();
         self
     }
 
@@ -94,8 +99,7 @@ impl ConsumerBuilder {
 
     pub fn build(self) -> ConsumerManager {
         ConsumerManager {
-            connection: self.connection.unwrap(),
-            channels: vec!()
+            connection: self.connection.unwrap()
         }
     }
 }
