@@ -3,8 +3,10 @@
 
 Checkout the project: https://github.com/gftea/amqprs
 
+This is a fun side project for learning, and implement my current knowledge in Rustlang.
+
 To use the library you have to first create the event queues, and their specific handlers.
-Events are expected to be of type string, and handlers implementations of BaseCallbacks.
+Every handler must a function that receives the type ```String``` only.
 
 ## Running RabbitMQ Locally
 
@@ -17,41 +19,21 @@ rabbitmq-server
 To create a smart-publisher subscriber start by importing the required types.
 ```rust
 use tokio;
-use alicemq::consumer::{Consumer};
-use alicemq::callback::{BaseCallback};
+use tracing::{Level};
+use tracing_subscriber::FmtSubscriber;
+use uuid::Uuid;
+use alicemq::consumer::ConsumerManager;
 ```
 
 ### Implementing a custom consumer handler.
 
-Currently, non-blocking async consumers, are supported. To define a new AsyncConsumer
-first implement a custom callback. indicate if it should or should not handle a custom ack.
+Currently, non-blocking async consumers, are supported. To define a handler follow 
+the subsequent structure:
 
 ```rust
-struct ConsumerCallback {
-    no_ack: bool
-}
-````
-
-Defining the AsyncConsumer from the AMPQRS library
-
-```rust
-use async_trait::async_trait;
-
-#[async_trait]
-impl AsyncConsumer for ConsumerCallback {
-    async fn consume(
-        &mut self,
-        channel: &Channel,
-        deliver: Deliver,
-        _basic_properties: BasicProperties,
-        _content: Vec<u8>,
-    ) {
-        info!("got message with data {}", std::str::from_utf8(&_content).unwrap());
-        if !self.no_ack {
-            let args = BasicAckArguments::new(deliver.delivery_tag(), false);
-            channel.basic_ack(args).await.unwrap();
-        }
-    }
+fn print_some_stuff(message: String) {
+    let id = Uuid::new_v4();
+    println!("Got message: {}, stored with uuid: {}", message, id);
 }
 ````
 
@@ -64,19 +46,23 @@ Define a queue and its respective callback handler.
 #[tokio::main]
 async fn main() {
 
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
+
     let queue: String = "test_event".to_string();
 
     let test_consumer = ConsumerManager::new()
         .connect()
-        .await
-        .add_channel()
         .await
         .build();
 
     test_consumer
         .set_event_queue(
             queue,
-            ConsumerCallback {no_ack: false}
+            print_some_stuff
         ).await
         .run(true).await;
 }

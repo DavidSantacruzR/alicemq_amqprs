@@ -11,16 +11,20 @@ fn print_some_stuff(message: String) {
 
 #[tokio::main]
 async fn main() {
+
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
         .finish();
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting default subscriber failed");
+
     let queue: String = "test_event".to_string();
+
     let test_consumer = ConsumerManager::new()
         .connect()
         .await
         .build();
+
     test_consumer
         .set_event_queue(
             queue,
