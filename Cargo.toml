@@ -2,5 +2,5 @@
 
 members = [
     "alicemq",
-    "examples",
+    "usage_examples",
 ]
