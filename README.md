@@ -5,6 +5,10 @@ Checkout the project: https://github.com/gftea/amqprs
 
 This is a fun side project for learning, and implement my current knowledge in Rustlang.
 
+````
+THIS PROJECT IS GETTING A SECOND RE-WRITTE :D
+````
+
 To use the library you have to first create the event queues, and their specific handlers.
 Every handler must a function that receives the type ```String``` only.
 
