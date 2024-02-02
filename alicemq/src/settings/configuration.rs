@@ -50,9 +50,16 @@ impl ConnectionSettings {
 #[cfg(test)]
 mod tests {
     use crate::settings::configuration::ConnectionSettings;
+    use std::fs::{File, remove_file};
+    use std::io::Write;
 
     #[test]
     fn test_load_env_settings() {
+        let mut file = File::create(".env").expect("Unable to create .env file.");
+        writeln!(file, "host=localhost").expect("did not set localhost.");
+        writeln!(file, "port=5672").expect("did not set port.");
+        writeln!(file, "username=guest").expect("did not set username.");
+        writeln!(file, "password=guest").expect("did not set password.");
         let _settings = ConnectionSettings::new();
         let _manual_settings_object = ConnectionSettings {
             host: "localhost".to_string(),
@@ -60,6 +67,7 @@ mod tests {
             username: "guest".to_string(),
             password: "guest".to_string(),
         };
+        let _ = remove_file(".env").is_ok();
         assert_eq!(_settings, _manual_settings_object)
     }
 
