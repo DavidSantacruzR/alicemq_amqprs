@@ -72,6 +72,15 @@ mod tests {
     }
 
     #[test]
-    fn test_load_settings_default() {}
+    fn test_load_settings_default() {
+        let _settings = ConnectionSettings::new();
+        let _manual_settings_object = ConnectionSettings {
+            host: "localhost".to_string(),
+            port: 5672,
+            username: "guest".to_string(),
+            password: "guest".to_string(),
+        };
+        assert_eq!(_settings, _manual_settings_object)
+    }
 }
 
