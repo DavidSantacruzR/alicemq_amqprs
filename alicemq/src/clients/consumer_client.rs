@@ -12,7 +12,7 @@ pub struct ConsumerManager {
 
 impl ConsumerManager {
 
-    pub fn new() -> ConsumerBuilder {
+    pub fn new_instance() -> ConsumerBuilder {
         ConsumerBuilder {}
     }
 
