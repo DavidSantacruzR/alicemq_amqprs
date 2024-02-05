@@ -12,6 +12,13 @@ pub struct ConsumerManager {
 
 impl ConsumerManager {
 
+    /*
+    TODO:
+     a. Implement channel connections, with queues.
+     b. Implement test for rx, tx messages.
+     c. Implement a way to handle messages concurrently, with custom handler functions.
+
+    */
     pub fn new_instance() -> ConsumerBuilder {
         ConsumerBuilder {}
     }
