@@ -3,17 +3,22 @@ use std::collections::HashMap;
 use crate::settings::constants::{DEFAULT_HOST, DEFAULT_PASSWORD, DEFAULT_PORT, DEFAULT_USER};
 
 #[derive(PartialEq, Debug)]
-struct ConnectionSettings {
-    host: String,
-    port: u16,
-    username: String,
-    password: String
+pub struct ConnectionSettings {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String
+}
+
+impl Default for ConnectionSettings {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConnectionSettings {
 
-    #[allow(dead_code)]
-    fn new() -> ConnectionSettings {
+    pub fn new() -> ConnectionSettings {
         let _settings = ConnectionSettings::load_settings();
         ConnectionSettings {
             host: String::from(_settings.get("HOST").unwrap()),
@@ -23,7 +28,6 @@ impl ConnectionSettings {
         }
     }
 
-    #[allow(dead_code)]
     fn load_settings() -> HashMap<&'static str, String> {
         dotenv().ok();
         let mut connection_settings = HashMap::new();
