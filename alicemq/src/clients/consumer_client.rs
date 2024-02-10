@@ -17,10 +17,7 @@ impl ConsumerManager {
 
     /*
     TODO:
-     a. Implement channel connections, with queues.
-     b. Implement test for rx, tx messages.
-     c. Implement a way to handle messages concurrently, with custom handler functions.
-
+     a. Set the ack to True by default, removing custom handlers for acknowledgment.
     */
     pub fn new_instance() -> ConsumerBuilder {
         ConsumerBuilder {}

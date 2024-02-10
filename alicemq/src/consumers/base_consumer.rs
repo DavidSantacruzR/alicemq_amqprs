@@ -11,6 +11,10 @@ pub struct BaseConsumer<F, Fut>
         F: Fn(Vec<u8>) -> Fut + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static,
 {
+    /*
+    TODO:
+        a. Remove unused field to set auto ack to True by default on consumer..
+    */
     auto_ack: bool,
     callback: F,
     _phantom: PhantomData<(Vec<u8>, Fut)>
