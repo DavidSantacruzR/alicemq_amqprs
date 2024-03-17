@@ -19,3 +19,7 @@ async-trait = "0.1"
 [[example]]
 name = "basic_consumer"
 path = "src/basic_consumer.rs"
+
+[[example]]
+name = "basic_publisher"
+path = "src/basic_publisher.rs"
