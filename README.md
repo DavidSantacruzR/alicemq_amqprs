@@ -3,11 +3,7 @@
 
 Checkout the project: https://github.com/gftea/amqprs
 
-This is a fun side project for learning, and implement my current knowledge in Rustlang.
-
-````
-THIS PROJECT IS GETTING A SECOND RE-WRITTE :D
-````
+**_This is a fun side project for learning, and implement my current knowledge in Rustlang._**
 
 To use the library you have to first create the event queues, and their specific handlers.
 Every handler must a function that receives the type ```String``` only.
@@ -22,11 +18,11 @@ rabbitmq-server
 
 To create a smart-publisher subscriber start by importing the required types.
 ```rust
-use tokio;
-use tracing::{Level};
+use std::future::Future;
+use tracing::{debug, Level};
+use alicemq::clients::consumer_client::ConsumerManager;
+use alicemq::consumers::base_consumer::BaseConsumer;
 use tracing_subscriber::FmtSubscriber;
-use uuid::Uuid;
-use alicemq::consumer::ConsumerManager;
 ```
 
 ### Implementing a custom consumer handler.
@@ -35,9 +31,10 @@ Currently, non-blocking async consumers, are supported. To define a handler foll
 the subsequent structure:
 
 ```rust
-fn print_some_stuff(message: String) {
-    let id = Uuid::new_v4();
-    println!("Got message: {}, stored with uuid: {}", message, id);
+async fn my_callback(data: Vec<u8>) -> impl Future<Output = ()> {
+    async {
+        debug!("Received data: {:?}", String::from_utf8(data));
+    }
 }
 ````
 
@@ -49,26 +46,24 @@ Define a queue and its respective callback handler.
 ```rust
 #[tokio::main]
 async fn main() {
-
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
-
-    let queue: String = "test_event".to_string();
-
-    let test_consumer = ConsumerManager::new()
-        .connect()
-        .await
-        .build();
-
-    test_consumer
-        .set_event_queue(
-            queue,
-            print_some_stuff
-        ).await
-        .run(true).await;
+    let _ = set_tracing_subscriber();
+    let mut _manager: ConsumerManager = ConsumerManager::new_instance()
+        .connect().await;
+    _manager.set_queue("test_queue", BaseConsumer::new(
+        |data| {
+            async move {
+                my_callback(data).await.await;
+            }
+        },
+    ), None).await;
+    _manager.set_queue("another_test_queue", BaseConsumer::new(
+        |data| {
+            async move {
+                my_callback(data).await.await;
+            }
+        },
+    ), None).await;
+    _manager.run(true).await;
 }
 ```
 
@@ -77,15 +72,26 @@ Supported data to deliver, strings only.
 
 ### Creating a smart publisher
 ```rust
-use alicemq::{publisher::Publisher};
-use tokio;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
+use alicemq::clients::publisher_client::Publisher;
+
+fn set_tracing_subscriber() {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
+}
 
 #[tokio::main]
 async fn main() {
-
-    let publisher = Publisher {};
-    let message = String::from("data: {field_1: some data}");
-    publisher.send_message(message, "test_event".to_string()).await;
+    let _ = set_tracing_subscriber();
+    for i in 1..10 {
+        let _ = Publisher::send_message(
+            format!("This message contains the id {}", i), String::from("test_queue")
+        ).await;
+    }
 }
 ```
 
