@@ -5,9 +5,9 @@ use alicemq::consumers::base_consumer::BaseConsumer;
 use tracing_subscriber::FmtSubscriber;
 
 async fn my_callback(data: Vec<u8>) -> impl Future<Output = ()> {
-    debug!("Received data: {:?}", String::from_utf8(data));
-    // Placeholder future
-    async {}
+    async {
+        debug!("Received data: {:?}", String::from_utf8(data));
+    }
 }
 
 fn set_tracing_subscriber() {
@@ -24,20 +24,18 @@ async fn main() {
     let mut _manager: ConsumerManager = ConsumerManager::new_instance()
         .connect().await;
     _manager.set_queue("test_queue", BaseConsumer::new(
-        true,
         |data| {
             async move {
                 my_callback(data).await.await;
             }
         },
-    )).await;
+    ), None).await;
     _manager.set_queue("another_test_queue", BaseConsumer::new(
-        true,
         |data| {
             async move {
                 my_callback(data).await.await;
             }
         },
-    )).await;
+    ), None).await;
     _manager.run(true).await;
 }

@@ -15,7 +15,7 @@ async fn main() {
     let _ = set_tracing_subscriber();
     for i in 1..10 {
         let _ = Publisher::send_message(
-            format!("This message containse the id {}", i), String::from("test_queue")
+            format!("This message contains the id {}", i), String::from("test_queue")
         ).await;
     }
 }

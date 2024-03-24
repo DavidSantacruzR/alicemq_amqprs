@@ -1,6 +1,6 @@
 use std::future::Future;
 use amqprs::callbacks::DefaultChannelCallback;
-use amqprs::channel::{BasicConsumeArguments, Channel, QueueBindArguments, QueueDeclareArguments};
+use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use tokio::sync::Notify;
 use tracing::{debug};
@@ -14,11 +14,7 @@ pub struct ConsumerManager {
 }
 
 impl ConsumerManager {
-
-    /*
-    TODO:
-     a. Set the ack to True by default, removing custom handlers for acknowledgment.
-    */
+    
     pub fn new_instance() -> ConsumerBuilder {
         ConsumerBuilder {}
     }
@@ -36,7 +32,12 @@ impl ConsumerManager {
         }
     }
 
-    pub async fn set_queue<F, Fut>(&mut self, queue: &'static str, consumer: BaseConsumer<F, Fut>)
+    pub async fn set_queue<F, Fut>(
+        &mut self, 
+        queue: &'static str, 
+        consumer: BaseConsumer<F, Fut>, 
+        prefetch: Option<u16>
+    )
         where
             F: Fn(Vec<u8>) -> Fut + Send + 'static,
             Fut: Future<Output = ()> + Send + 'static
@@ -59,6 +60,13 @@ impl ConsumerManager {
                 let args = BasicConsumeArguments::new(&queue_name, "basic_consumer")
                     .no_ack(true)
                     .finish();
+                _opened_channel
+                    .basic_qos(BasicQosArguments::new(
+                        0, 
+                        prefetch.unwrap_or(0), 
+                        false))
+                    .await
+                    .unwrap();
                 _opened_channel
                     .basic_consume(consumer, args)
                     .await
