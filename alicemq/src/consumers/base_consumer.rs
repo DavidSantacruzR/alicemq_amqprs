@@ -42,7 +42,7 @@ impl<F, Fut> AsyncConsumer for BaseConsumer<F, Fut>
         content: Vec<u8>,
     ) {
         let callback = &self.callback;
-        let parsed_content = from_slice(&content).unwrap();
+        let parsed_content: Value = from_slice(&content).unwrap();
         tokio::spawn(callback(parsed_content));
     }
 }

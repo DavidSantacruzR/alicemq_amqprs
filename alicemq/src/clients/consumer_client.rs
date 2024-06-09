@@ -56,15 +56,15 @@ impl ConsumerManager {
                 _opened_channel.queue_bind(QueueBindArguments::new(
                     &queue_name,
                     "amq.topic",
-                    "amqprs.example"
+                    &queue_name
                 )).await.unwrap();
-                let args = BasicConsumeArguments::new(&queue_name, "basic_consumer")
+                let args = BasicConsumeArguments::new(&queue_name, &queue_name)
                     .manual_ack(false)
                     .finish();
                 _opened_channel
                     .basic_qos(BasicQosArguments::new(
-                        0, 
-                        prefetch.unwrap_or(0), 
+                        0,
+                        prefetch.unwrap_or(0),
                         false))
                     .await
                     .unwrap();
