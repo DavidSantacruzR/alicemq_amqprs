@@ -2,9 +2,25 @@ use tracing::{debug, Level};
 use alicemq::clients::consumer_client::ConsumerManager;
 use alicemq::consumers::base_consumer::BaseConsumer;
 use tracing_subscriber::FmtSubscriber;
+use serde_json::{Value};
+use tokio::fs::OpenOptions;
+use tokio::io::{AsyncWriteExt, BufWriter};
 
-async fn my_callback(data: Vec<u8>) {
-    debug!("Received data: {:?}", String::from_utf8(data));
+async fn my_callback(data: Value) {
+    debug!("Receiving messages {:?}", &data);
+    let filename = "output.json";
+    let json_data = serde_json::to_vec(&data).expect("Failed to serialize data to JSON");
+    let file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(filename)
+        .await
+        .expect("Failed to open file");
+
+    let mut buf_writer = BufWriter::new(file);
+
+    buf_writer.write_all(&json_data).await.expect("Failed to write data to file");
+    buf_writer.flush().await.expect("Failed to flush buffer");
 }
 
 fn set_tracing_subscriber() {

@@ -5,15 +5,17 @@ use amqprs::channel::{BasicPublishArguments, QueueBindArguments};
 use amqprs::connection::OpenConnectionArguments;
 use tracing::{debug};
 use crate::settings::configuration::ConnectionSettings;
+use serde_json::{Value};
+use serde_json::to_vec;
 
 #[derive(Clone)]
 pub struct Publisher;
 
 impl Publisher {
-    pub async fn send_message(data: String, queue: String) {
+    pub async fn send_message(data: Value, queue: String) {
         tracing_subscriber::registry();
 
-        let message = data.into_bytes();
+        let message = to_vec(&data).unwrap();
         let routing_key = "amqprs.example";
         let exchange_name = "amq.topic";
         let _settings = ConnectionSettings::new();

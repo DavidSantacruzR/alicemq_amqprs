@@ -4,19 +4,20 @@ use amqprs::channel::{Channel};
 use amqprs::consumer::AsyncConsumer;
 use amqprs::{BasicProperties, Deliver};
 use async_trait::async_trait;
+use serde_json::{from_slice, Value};
 
 pub struct BaseConsumer<F, Fut>
     where
-        F: Fn(Vec<u8>) -> Fut + Send + 'static,
+        F: Fn(Value) -> Fut + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static,
 {
     callback: F,
-    _phantom: PhantomData<(Vec<u8>, Fut)>
+    _phantom: PhantomData<(Value, Fut)>
 }
 
 impl<F, Fut> BaseConsumer<F, Fut>
     where
-        F: Fn(Vec<u8>) -> Fut + Send + 'static,
+        F: Fn(Value) -> Fut + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static,
 {
     pub fn new(callback: F) -> Self {
@@ -30,7 +31,7 @@ impl<F, Fut> BaseConsumer<F, Fut>
 #[async_trait]
 impl<F, Fut> AsyncConsumer for BaseConsumer<F, Fut>
     where
-        F: Fn(Vec<u8>) -> Fut + Send + 'static,
+        F: Fn(Value) -> Fut + Send + 'static,
         Fut: Future<Output = ()> + Send + 'static
 {
     async fn consume(
@@ -41,6 +42,7 @@ impl<F, Fut> AsyncConsumer for BaseConsumer<F, Fut>
         content: Vec<u8>,
     ) {
         let callback = &self.callback;
-        tokio::spawn(callback(content));
+        let parsed_content = from_slice(&content).unwrap();
+        tokio::spawn(callback(parsed_content));
     }
 }
