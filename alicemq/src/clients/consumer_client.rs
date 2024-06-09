@@ -3,9 +3,10 @@ use amqprs::callbacks::DefaultChannelCallback;
 use amqprs::channel::{BasicConsumeArguments, BasicQosArguments, Channel, QueueBindArguments, QueueDeclareArguments};
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use tokio::sync::Notify;
-use tracing::{debug};
+use tracing::{debug, error};
 use crate::consumers::base_consumer::BaseConsumer;
 use crate::settings::configuration::ConnectionSettings;
+use serde_json::{Value};
 
 #[allow(dead_code)]
 pub struct ConsumerManager {
@@ -39,7 +40,7 @@ impl ConsumerManager {
         prefetch: Option<u16>
     )
         where
-            F: Fn(Vec<u8>) -> Fut + Send + 'static,
+            F: Fn(Value) -> Fut + Send + 'static,
             Fut: Future<Output = ()> + Send + 'static
     {
         let _channel = self.connection.open_channel(None).await;
@@ -55,15 +56,15 @@ impl ConsumerManager {
                 _opened_channel.queue_bind(QueueBindArguments::new(
                     &queue_name,
                     "amq.topic",
-                    "amqprs.example"
+                    &queue_name
                 )).await.unwrap();
-                let args = BasicConsumeArguments::new(&queue_name, "basic_consumer")
-                    .no_ack(true)
+                let args = BasicConsumeArguments::new(&queue_name, &queue_name)
+                    .manual_ack(false)
                     .finish();
                 _opened_channel
                     .basic_qos(BasicQosArguments::new(
-                        0, 
-                        prefetch.unwrap_or(0), 
+                        0,
+                        prefetch.unwrap_or(0),
                         false))
                     .await
                     .unwrap();
@@ -73,7 +74,7 @@ impl ConsumerManager {
                     .unwrap();
                 self.channels.push(_opened_channel);
             },
-            Err(_) => {println!("Unable to register channel {:?}", queue)}
+            Err(_) => {error!("Unable to register channel {:?}", queue)}
         };
     }
 }

@@ -1,6 +1,8 @@
 use dotenv::dotenv;
 use std::collections::HashMap;
-use crate::settings::constants::{DEFAULT_HOST, DEFAULT_PASSWORD, DEFAULT_PORT, DEFAULT_USER};
+use crate::settings::constants::{
+    DEFAULT_HOST, DEFAULT_PASSWORD, DEFAULT_PORT, DEFAULT_USER
+};
 
 #[derive(PartialEq, Debug)]
 pub struct ConnectionSettings {
