@@ -16,7 +16,7 @@ impl Publisher {
         tracing_subscriber::registry();
 
         let message = to_vec(&data).unwrap();
-        let routing_key = "amqprs.example";
+        let routing_key = &queue;
         let exchange_name = "amq.topic";
         let _settings = ConnectionSettings::new();
         let _connection = Connection::open(&OpenConnectionArguments::new(
